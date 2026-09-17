@@ -1,0 +1,71 @@
+openapi: 3.0.3
+info:
+  title: CampusEats Orders
+  version: "1.0.0"
+servers:
+  - url: http://localhost:8081
+paths:
+  /orders:
+    post:
+      summary: Place a new order
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderRequest"
+      responses:
+        "201": { description: Order created }
+        "400": { description: Invalid request }
+        "422": { description: Payment declined }
+        "503": { description: Payments service unreachable }
+    get:
+      summary: List a student's orders
+      parameters:
+        - in: query
+          name: student
+          schema:
+            type: integer
+      responses:
+        "200": { description: List of orders }
+  /orders/{id}:
+    get:
+      summary: Read a single order
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200": { description: Order details }
+        "404": { description: Order not found }
+  /orders/{id}/cancel:
+    post:
+      summary: Cancel an order
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "202": { description: Cancellation accepted }
+        "404": { description: Order not found }
+        "409": { description: State conflict }
+
+components:
+  schemas:
+    OrderRequest:
+      type: object
+      required: [studentId, itemId, qty, paymentMethodId]
+      properties:
+        studentId: { type: integer }
+        itemId: { type: integer }
+        qty: { type: integer, minimum: 1 }
+        paymentMethodId: { type: string }
