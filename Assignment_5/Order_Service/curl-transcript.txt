@@ -1,0 +1,83 @@
+1. A successful create (shows 201 and Location header):
+
+C:\Users\shiva\OneDrive\Documents\campusEats\campuseats\Assignment_4Orders\Part C>curl.exe -i -X POST http://localhost:8081/orders -H "Content-Type: application/json" -H "Idempotency-Key: key-123" -d "{\"studentId\":101,\"itemId\":5,\"qty\":2,\"paymentMethodId\":\"tok_good\"}"
+HTTP/1.1 201 Created
+X-Powered-By: Express
+Location: /orders/1
+Content-Type: application/json; charset=utf-8
+Content-Length: 100
+ETag: W/"64-qFFpY7fBXTVsicTRvZOsLLJI51o"
+Date: Wed, 02 Sep 2026 17:58:27 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":1,"studentId":101,"itemId":5,"qty":2,"status":"placed","createdAt":"2026-09-02T17:58:27.301Z"}
+
+The exact same request repeated (shows 200, returning the original):
+
+                                                                                  curl.exe -i -X POST http://localhost:8081/orders -H "Content-Type: application/json" -H "Idempotency-Key: key-123" -d "{\"studentId\":101,\"itemId\":5,\"qty\":2,\"paymentMethodId\":\"tok_good\"}"ent_4Orders\Part C>
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 100
+ETag: W/"64-qFFpY7fBXTVsicTRvZOsLLJI51o"
+Date: Wed, 02 Sep 2026 18:00:15 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":1,"studentId":101,"itemId":5,"qty":2,"status":"placed","createdAt":"2026-09-02T17:58:27.301Z"}
+
+3. A malformed body rejected (shows 400):
+
+C:\Users\shiva\OneDrive\Documents\campusEats\campuseats\Assignment_4Orders\Part C>curl.exe -i -X POST http://localhost:8081/orders -H "Content-Type: application/json" -d "{\"studentId\":\"wrong_type\"}"
+HTTP/1.1 400 Bad Request
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 217
+ETag: W/"d9-L01Ddk8tBbOUELfeTSB9OLFGbuc"
+Date: Wed, 02 Sep 2026 18:01:14 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/invalid-request","title":"Invalid request","status":400,"detail":"","errors":[["studentId","required integer"],["itemId","required integer"],["qty","positive integer"],["paymentMethodId","required"]]}
+
+4. A missing resource (shows 404):
+
+C:\Users\shiva\OneDrive\Documents\campusEats\campuseats\Assignment_4Orders\Part C>curl.exe -i http://localhost:8081/orders/999
+HTTP/1.1 404 Not Found
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 97
+ETag: W/"61-0aGnp8BnAjU54gcc0Hv1xY6nHU0"
+Date: Wed, 02 Sep 2026 18:02:01 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/order-not-found","title":"Order not found","status":404,"detail":"No order 999"}
+C:\Users\shiva\OneDrive\Documents\campusEats\campuseats\Assignment_4Orders\Part C>
+
+5. A state conflict (shows 409):
+
+C:\Users\shiva\OneDrive\Documents\campusEats\campuseats\Assignment_4Orders\Part C>curl.exe -i -X POST http://localhost:8081/orders/1/cancel
+HTTP/1.1 202 Accepted
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 29
+ETag: W/"1d-JMDTFT0ZxEc2LgehzTU7SHfBalc"
+Date: Wed, 02 Sep 2026 18:02:52 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":1,"status":"cancelled"}
+C:\Users\shiva\OneDrive\Documents\campusEats\campuseats\Assignment_4Orders\Part C>curl.exe -i -X POST http://localhost:8081/orders/1/cancel
+HTTP/1.1 409 Conflict
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 107
+ETag: W/"6b-5lOWO74D6gKqL0p74wkx0216gpI"
+Date: Wed, 02 Sep 2026 18:03:01 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/state-conflict","title":"Cannot cancel order","status":409,"detail":"status is cancelled"}
+C:\Users\shiva\OneDrive\Documents\campusEats\campuseats\Assignment_4Orders\Part C>

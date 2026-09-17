@@ -1,0 +1,16 @@
+PS C:\Users\shiva\OneDrive\Documents\campusEats\campuseats\Assignment_4Orders\Part C> npm test
+
+> part-c@1.0.0 test
+> jest
+
+ PASS  ./orders.test.js
+  √ create order returns 201 with Location header (115 ms)
+  √ same idempotency key returns original 200 (17 ms)
+  √ unknown payment id returns 404 (9 ms)
+  √ malformed body is rejected with 400 (8 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        1.703 s
+Ran all test suites.
