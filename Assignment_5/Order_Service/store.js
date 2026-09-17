@@ -21,7 +21,11 @@ function findByStudent(studentId) {
     return Array.from(_orders.values()).filter(o => o.studentId === studentId);
 }
 
+function findAll() {
+    return Array.from(_orders.values());
+}
+
 // For tests
 function _reset() { _orders.clear(); _byKey.clear(); _nextId = 1; }
 
-module.exports = { create, find, findByKey, findByStudent, _reset, _nextId };
+module.exports = { create, find, findByKey, findByStudent, findAll, _reset, _nextId };

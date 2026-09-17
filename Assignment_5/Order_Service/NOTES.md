@@ -64,6 +64,28 @@ POST `/orders` creates a new order, so repeating the request can create multiple
 
 The cancel operation changes the order state from `placed` to `cancelled`, so it is not a safe operation.
 
+## A4: List, Filter, Sort and Paginate
+
+The order list endpoint remains a pure GET/read operation.
+
+GET `/orders`
+
+Supported query parameters:
+
+- `student` — filter orders by student ID
+- `page` — page number, default `1`
+- `limit` — number of results per page, default `10`
+- `sort` — `createdAt` or `id`, default `createdAt`
+- `order` — `asc` or `desc`, default `asc`
+
+Example:
+
+GET `/orders?student=101&page=1&limit=10&sort=createdAt&order=desc`
+
+Invalid query parameters return `400 Bad Request`.
+
+The endpoint does not modify server state.
+
 ## A5: OPTIONS and Allow
 
 The Orders service implements:

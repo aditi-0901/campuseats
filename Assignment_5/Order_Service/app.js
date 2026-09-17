@@ -81,7 +81,7 @@ app.get('/orders', (req, res) => {
 
     let items = student !== null
         ? store.findByStudent(student)
-        : [];
+        : store.findAll();
 
     items.sort((a, b) => {
         let value;
