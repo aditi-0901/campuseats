@@ -81,3 +81,34 @@ Keep-Alive: timeout=5
 
 {"type":"/errors/state-conflict","title":"Cannot cancel order","status":409,"detail":"status is cancelled"}
 C:\Users\shiva\OneDrive\Documents\campusEats\campuseats\Assignment_4Orders\Part C>
+
+
+===== A6 Complete Successful Request/Response =====
+Open terminal in directory=> Assignment_5\Order_Service
+Command : node app.js
+Command : dummy_bank.js (in new terminal)
+Command : curl.exe -v "http://localhost:8081/orders" -H "Content-Type: application/json" -H "Idempotency-Key: part-a-demo-001" --data-binary "@request.json"
+
+REQUEST
+> POST /orders HTTP/1.1
+> Host: localhost:8081
+> User-Agent: curl/8.21.0
+> Accept: */*
+> Content-Type: application/json
+> Idempotency-Key: part-a-demo-001
+> Content-Length: 67
+>
+{"studentId":101,"itemId":5,"qty":2,"paymentMethodId":"tok_good"}
+
+RESPONSE
+< HTTP/1.1 201 Created
+< X-Powered-By: Express
+< Location: /orders/1
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 100
+< ETag: W/"64-9whKB57dhCZVgLXhPA8VCDGVOqA"
+< Date: Thu, 17 Sep 2026 16:59:08 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+<
+{"id":1,"studentId":101,"itemId":5,"qty":2,"status":"placed","createdAt":"2026-09-17T16:59:08.334Z"}

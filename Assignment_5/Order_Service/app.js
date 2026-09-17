@@ -47,9 +47,58 @@ app.get('/orders/:id', (req, res) => {
 });
 
 app.get('/orders', (req, res) => {
-    const student = parseInt(req.query.student);
-    const items = student ? store.findByStudent(student) : [];
-    return res.status(200).json(items.map(o => o.asJson()));
+    const student = req.query.student
+        ? Number(req.query.student)
+        : null;
+
+    const page = req.query.page
+        ? Number(req.query.page)
+        : 1;
+
+    const limit = req.query.limit
+        ? Number(req.query.limit)
+        : 10;
+
+    const sort = req.query.sort || 'createdAt';
+    const order = req.query.order || 'asc';
+
+    if (
+        (student !== null && !Number.isInteger(student)) ||
+        !Number.isInteger(page) ||
+        page < 1 ||
+        !Number.isInteger(limit) ||
+        limit < 1 ||
+        !['createdAt', 'id'].includes(sort) ||
+        !['asc', 'desc'].includes(order)
+    ) {
+        return problem(
+            res,
+            400,
+            "invalid-request",
+            "Invalid query parameters"
+        );
+    }
+
+    let items = student !== null
+        ? store.findByStudent(student)
+        : [];
+
+    items.sort((a, b) => {
+        let value;
+
+        if (sort === 'id') {
+            value = a.id - b.id;
+        } else {
+            value = new Date(a.createdAt) - new Date(b.createdAt);
+        }
+
+        return order === 'asc' ? value : -value;
+    });
+
+    const start = (page - 1) * limit;
+    const result = items.slice(start, start + limit);
+
+    return res.status(200).json(result.map(o => o.asJson()));
 });
 
 app.post('/orders/:id/cancel', (req, res) => {
