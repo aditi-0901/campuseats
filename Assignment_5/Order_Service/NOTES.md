@@ -21,15 +21,62 @@ If the Payments dependency is unreachable, the Orders service chooses to fail wi
 5. I would choose SOAP for the Payments component if strict transactional guarantees across multiple distinct databases were required. SOAP provides WS-AtomicTransaction, which can guarantee a distributed rollback if one part of a multi-system transaction fails, a guarantee REST lacks without building complex custom sagas.
 
 Assignment 5
-X-HTTP-Method-Override is supported only as a documented fallback for clients that cannot send PUT/DELETE directly. The current Orders endpoints do not require PUT or DELETE, so no production dependency is placed on the override mechanism.
 
-Request:
-request line
-Host
-headers
-JSON body
 
-Response:
-status line
-headers
-body
+# Part A — Methods & Message
+
+## A1: CampusEats Method Map
+
+| Action | HTTP Method | URL |
+|---|---|---|
+| Place a new order | POST | `/orders` |
+| List student orders | GET | `/orders?student={id}` |
+| Read a single order | GET | `/orders/{id}` |
+| Cancel an order | POST | `/orders/{id}/cancel` |
+
+The API uses HTTP methods according to the resource operation:
+- GET = read
+- POST = create
+- POST sub-resource = non-CRUD state-changing action
+
+## A2: Non-CRUD Action
+
+Order cancellation is not modeled as `POST /cancelOrder`.
+
+Instead, it is represented as:
+
+POST `/orders/{id}/cancel`
+
+This keeps the URL resource-oriented while clearly representing cancellation as a state-changing action.
+
+## A3: Safe and Idempotent
+
+| Endpoint | Safe | Idempotent |
+|---|---|---|
+| GET `/orders` | Yes | Yes |
+| GET `/orders/{id}` | Yes | Yes |
+| POST `/orders` | No | No naturally; Idempotency-Key makes retries safe |
+| POST `/orders/{id}/cancel` | No | Not naturally |
+
+GET operations are read-only and never modify server state.
+
+POST `/orders` creates a new order, so repeating the request can create multiple orders. The Idempotency-Key mechanism prevents duplicate creation when the same key is retried.
+
+The cancel operation changes the order state from `placed` to `cancelled`, so it is not a safe operation.
+
+## A5: OPTIONS and Allow
+
+The Orders service implements:
+
+OPTIONS `/orders`
+
+The response is:
+
+HTTP/1.1 204 No Content
+Allow: GET, POST, OPTIONS
+
+This informs the client which HTTP methods are supported for the `/orders` resource.
+
+### X-HTTP-Method-Override
+
+X-HTTP-Method-Override is documented as a fallback for constrained clients that cannot directly send methods such as PUT or DELETE. The current Orders API does not depend on this mechanism because its existing endpoints do not require PUT or DELETE.
