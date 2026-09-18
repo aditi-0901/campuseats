@@ -1,3 +1,15 @@
+CampusEats Order Service — Assignment 5
+FINAL FULL TERMINAL / CURL TRANSCRIPT
+===============================================================
+This file preserves the complete terminal commands, curl commands,
+HTTP requests, HTTP responses, headers, JSON bodies, and server
+verification output from the provided transcript.
+
+The earlier Assignment 4/Part C evidence is retained as historical
+terminal evidence, followed by the complete Assignment 5 A6 and D1
+verification evidence.
+===============================================================
+
 1. A successful create (shows 201 and Location header):
 
 C:\Users\shiva\OneDrive\Documents\campusEats\campuseats\Assignment_4Orders\Part C>curl.exe -i -X POST http://localhost:8081/orders -H "Content-Type: application/json" -H "Idempotency-Key: key-123" -d "{\"studentId\":101,\"itemId\":5,\"qty\":2,\"paymentMethodId\":\"tok_good\"}"
@@ -112,3 +124,305 @@ RESPONSE
 < Keep-Alive: timeout=5
 <
 {"id":1,"studentId":101,"itemId":5,"qty":2,"status":"placed","createdAt":"2026-09-17T16:59:08.334Z"}
+
+CampusEats Order Service — Assignment 5, Part D1 curl -v transcript
+Servers: node app.js (:8081)  +  node dummy_bank.js (:8080)
+================================================================
+
+----- 1) Successful create: 201 Created + Location -----
+* Host localhost:8081 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:8081...
+* Connected to localhost (127.0.0.1) port 8081
+> POST /orders HTTP/1.1
+> Host: localhost:8081
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer demo-token
+> Idempotency-Key: demo-key-001
+> Content-Length: 67
+> 
+} [67 bytes data]
+< HTTP/1.1 201 Created
+< X-Powered-By: Express
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+< Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+< X-RateLimit-Limit: 10
+< X-RateLimit-Remaining: 9
+< Location: /orders/1
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 100
+< ETag: W/"64-tRVuOjZd0fFBmgY08CTKP+Xe0gk"
+< Date: Fri, 18 Sep 2026 18:26:56 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [100 bytes data]
+* Connection #0 to host localhost left intact
+{"id":1,"studentId":101,"itemId":5,"qty":2,"status":"placed","createdAt":"2026-09-18T18:26:56.472Z"}
+----- 2) Same request + same Idempotency-Key (C3): 200 OK, ORIGINAL order returned, no duplicate charge -----
+* Host localhost:8081 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:8081...
+* Connected to localhost (127.0.0.1) port 8081
+> POST /orders HTTP/1.1
+> Host: localhost:8081
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer demo-token
+> Idempotency-Key: demo-key-001
+> Content-Length: 67
+> 
+} [67 bytes data]
+< HTTP/1.1 200 OK
+< X-Powered-By: Express
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+< Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+< X-RateLimit-Limit: 10
+< X-RateLimit-Remaining: 8
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 100
+< ETag: W/"64-tRVuOjZd0fFBmgY08CTKP+Xe0gk"
+< Date: Fri, 18 Sep 2026 18:26:56 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [100 bytes data]
+* Connection #0 to host localhost left intact
+{"id":1,"studentId":101,"itemId":5,"qty":2,"status":"placed","createdAt":"2026-09-18T18:26:56.472Z"}
+----- 3) GET order 1 to obtain its current ETag -----
+* Host localhost:8081 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:8081...
+* Connected to localhost (127.0.0.1) port 8081
+> GET /orders/1 HTTP/1.1
+> Host: localhost:8081
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Authorization: Bearer demo-token
+> 
+< HTTP/1.1 200 OK
+< X-Powered-By: Express
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+< Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+< X-RateLimit-Limit: 10
+< X-RateLimit-Remaining: 7
+< ETag: "order-1-placed-2026-09-18T18:26:56.472Z"
+< Cache-Control: private, max-age=60
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 100
+< Date: Fri, 18 Sep 2026 18:26:56 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [100 bytes data]
+* Connection #0 to host localhost left intact
+{"id":1,"studentId":101,"itemId":5,"qty":2,"status":"placed","createdAt":"2026-09-18T18:26:56.472Z"}
+----- 3b) Conditional GET (C1): If-None-Match == current ETag -> 304 Not Modified, empty body -----
+* Host localhost:8081 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:8081...
+* Connected to localhost (127.0.0.1) port 8081
+> GET /orders/1 HTTP/1.1
+> Host: localhost:8081
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Authorization: Bearer demo-token
+> If-None-Match: "order-1-placed-2026-09-18T18:26:56.472Z"
+> 
+< HTTP/1.1 304 Not Modified
+< X-Powered-By: Express
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+< Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+< X-RateLimit-Limit: 10
+< X-RateLimit-Remaining: 5
+< ETag: "order-1-placed-2026-09-18T18:26:56.472Z"
+< Cache-Control: private, max-age=60
+< Date: Fri, 18 Sep 2026 18:26:56 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+* Connection #0 to host localhost left intact
+
+----- 4) Conditional write rejected (C2): cancel with a STALE If-Match -> 412 Precondition Failed -----
+* Host localhost:8081 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:8081...
+* Connected to localhost (127.0.0.1) port 8081
+> POST /orders/1/cancel HTTP/1.1
+> Host: localhost:8081
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Authorization: Bearer demo-token
+> If-Match: "order-1-placed-1970-01-01T00:00:00.000Z"
+> 
+< HTTP/1.1 412 Precondition Failed
+< X-Powered-By: Express
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+< Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+< X-RateLimit-Limit: 10
+< X-RateLimit-Remaining: 4
+< Cache-Control: no-store
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 197
+< ETag: W/"c5-BA2sdKjS3lI42yRm+vKzv6+lJg0"
+< Date: Fri, 18 Sep 2026 18:26:56 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [197 bytes data]
+* Connection #0 to host localhost left intact
+{"type":"/errors/precondition-failed","title":"Order was modified since you last read it","status":412,"detail":"Order has changed since you last read it; GET it again and retry with the new ETag"}
+----- 4b) Cancel retried with the CURRENT If-Match -> 202 Accepted, order now cancelled -----
+* Host localhost:8081 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:8081...
+* Connected to localhost (127.0.0.1) port 8081
+> POST /orders/1/cancel HTTP/1.1
+> Host: localhost:8081
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Authorization: Bearer demo-token
+> If-Match: "order-1-placed-2026-09-18T18:26:56.472Z"
+> 
+< HTTP/1.1 202 Accepted
+< X-Powered-By: Express
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+< Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+< X-RateLimit-Limit: 10
+< X-RateLimit-Remaining: 3
+< ETag: "order-1-cancelled-2026-09-18T18:26:56.472Z"
+< Cache-Control: no-store
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 29
+< Date: Fri, 18 Sep 2026 18:26:56 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [29 bytes data]
+* Connection #0 to host localhost left intact
+{"id":1,"status":"cancelled"}
+----- 5) 400 Bad Request: malformed body -----
+* Host localhost:8081 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:8081...
+* Connected to localhost (127.0.0.1) port 8081
+> POST /orders HTTP/1.1
+> Host: localhost:8081
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer demo-token
+> Content-Length: 26
+> 
+} [26 bytes data]
+< HTTP/1.1 400 Bad Request
+< X-Powered-By: Express
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+< Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+< X-RateLimit-Limit: 10
+< X-RateLimit-Remaining: 2
+< Cache-Control: no-store
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 217
+< ETag: W/"d9-L01Ddk8tBbOUELfeTSB9OLFGbuc"
+< Date: Fri, 18 Sep 2026 18:26:56 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [217 bytes data]
+* Connection #0 to host localhost left intact
+{"type":"/errors/invalid-request","title":"Invalid request","status":400,"detail":"","errors":[["studentId","required integer"],["itemId","required integer"],["qty","positive integer"],["paymentMethodId","required"]]}
+----- 6) 404 Not Found: unknown order id -----
+* Host localhost:8081 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:8081...
+* Connected to localhost (127.0.0.1) port 8081
+> GET /orders/999 HTTP/1.1
+> Host: localhost:8081
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Authorization: Bearer demo-token
+> 
+< HTTP/1.1 404 Not Found
+< X-Powered-By: Express
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+< Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+< X-RateLimit-Limit: 10
+< X-RateLimit-Remaining: 1
+< Cache-Control: no-store
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 97
+< ETag: W/"61-0aGnp8BnAjU54gcc0Hv1xY6nHU0"
+< Date: Fri, 18 Sep 2026 18:26:56 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [97 bytes data]
+* Connection #0 to host localhost left intact
+{"type":"/errors/order-not-found","title":"Order not found","status":404,"detail":"No order 999"}
+----- 7) 401 Unauthorized: missing bearer token -----
+* Host localhost:8081 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:8081...
+* Connected to localhost (127.0.0.1) port 8081
+> GET /orders/1 HTTP/1.1
+> Host: localhost:8081
+> User-Agent: curl/8.5.0
+> Accept: */*
+> 
+< HTTP/1.1 401 Unauthorized
+< X-Powered-By: Express
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+< Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+< X-RateLimit-Limit: 10
+< X-RateLimit-Remaining: 0
+< Cache-Control: no-store
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 100
+< ETag: W/"64-cTWNwcsqzOtVDJQRvvhY6Bgcm0s"
+< Date: Fri, 18 Sep 2026 18:26:56 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [100 bytes data]
+* Connection #0 to host localhost left intact
+{"type":"/errors/unauthorized","title":"Unauthorized","status":401,"detail":"Bearer token required"}
