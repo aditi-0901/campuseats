@@ -4,6 +4,7 @@ const paymentsClient = require('./paymentsClient'); // Corrected path
 const { problem } = require('./errors');
 
 const app = express();
+console.log("C1 VERSION LOADED");
 app.use(express.json());
 
 app.use((req, res, next) => {
@@ -24,6 +25,20 @@ app.use((req, res, next) => {
 
     next();
 });
+
+// ===============================
+// B7: Security & general headers
+// ===============================
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    // Documents intent for production; this dev server itself runs on plain HTTP.
+    res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
+    next();
+});
+
+function etagFor(o) {
+    return `"order-${o.id}-${o.status}-${o.createdAt}"`;
+}
 
 
 // ===============================
@@ -69,7 +84,7 @@ app.use((req, res, next) => {
 
     res.setHeader(
         'Access-Control-Allow-Headers',
-        'Content-Type, Authorization, Accept, Idempotency-Key'
+        'Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match'
     );
 
     res.setHeader(
@@ -77,7 +92,9 @@ app.use((req, res, next) => {
         'GET, POST, DELETE, OPTIONS'
     );
 
-    if (req.method === 'OPTIONS') {
+    // /orders has its own OPTIONS handler below that sets a resource-specific
+    // Allow header (A5); everything else gets a generic CORS preflight reply.
+    if (req.method === 'OPTIONS' && req.path !== '/orders') {
         return res.status(204).send();
     }
 
@@ -136,12 +153,26 @@ app.post('/orders', requireBearer, async (req, res) => {
 
 app.get('/orders/:id', requireBearer, (req, res) => {
     const o = store.find(parseInt(req.params.id));
-    if (!o) return problem(res, 404, "order-not-found", `No order ${req.params.id}`);
+
+    if (!o) {
+        return problem(res, 404, "order-not-found", `No order ${req.params.id}`);
+    }
+
+    const etag = etagFor(o);
+    res.setHeader('ETag', etag);
     res.setHeader('Cache-Control', 'private, max-age=60');
-    res.setHeader(
-        'ETag',
-        `"order-${o.id}-${o.status}-${o.createdAt}"`
-    );
+
+    // Express helper req.get() handles header names case-insensitively 
+    let clientETag = req.get('If-None-Match');
+
+    if (clientETag) {
+        // Remove the weak prefix 'W/' if the client attached it
+        clientETag = clientETag.replace(/^W\//, '');
+
+        if (clientETag === etag) {
+            return res.status(304).end();
+        }
+    }
 
     return res.status(200).json(o.asJson());
 });
@@ -208,15 +239,36 @@ app.delete('/orders/:id', requireBearer, (req, res) => {
         return problem(res, 404, "order-not-found");
     }
 
+    res.setHeader('Cache-Control', 'no-store');
     return res.status(204).send();
 });
 
+// C2: Conditional write. This is the service's one "update" endpoint (it
+// transitions order status), so it is the one guarded by If-Match: a client
+// that read the order via GET /orders/:id and holds a stale ETag is told
+// 412 rather than being allowed to blindly overwrite a state it hasn't seen.
 app.post('/orders/:id/cancel', requireBearer, (req, res) => {
     const o = store.find(parseInt(req.params.id));
     if (!o) return problem(res, 404, "order-not-found");
+
+    const ifMatch = req.get('If-Match');
+    if (ifMatch) {
+        const clientETag = ifMatch.replace(/^W\//, '');
+        if (clientETag !== etagFor(o)) {
+            return problem(
+                res,
+                412,
+                "precondition-failed",
+                "Order has changed since you last read it; GET it again and retry with the new ETag"
+            );
+        }
+    }
+
     if (o.status !== "placed") return problem(res, 409, "state-conflict", `status is ${o.status}`);
 
     o.status = "cancelled";
+    res.setHeader('ETag', etagFor(o));
+    res.setHeader('Cache-Control', 'no-store');
     return res.status(202).json({ id: o.id, status: o.status });
 });
 

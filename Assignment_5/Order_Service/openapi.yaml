@@ -1,18 +1,26 @@
 openapi: 3.0.3
 info:
   title: CampusEats Orders
-  version: "1.0.0"
+  version: "5.0.0"
+  description: >
+    Order Service for CampusEats. All endpoints require a Bearer token
+    (B3) and are subject to per-client rate limiting (B5, X-RateLimit-*
+    response headers on every response). CORS is enabled on every
+    endpoint (B6). Error responses use a problem+json-style body
+    (type/title/status/detail) and are always sent with
+    Cache-Control: no-store.
 servers:
   - url: http://localhost:8081
+
+security:
+  - bearerAuth: []
+
 paths:
   /orders:
     post:
       summary: Place a new order
       parameters:
-        - in: header
-          name: Idempotency-Key
-          schema:
-            type: string
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -20,46 +28,202 @@ paths:
             schema:
               $ref: "#/components/schemas/OrderRequest"
       responses:
-        "201": { description: Order created }
-        "400": { description: Invalid request }
-        "422": { description: Payment declined }
-        "503": { description: Payments service unreachable }
+        "201":
+          description: Order created
+          headers:
+            Location:
+              description: URL of the newly created order
+              schema: { type: string }
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "200":
+          description: >
+            Idempotent replay (C3) — the same Idempotency-Key was seen
+            before, so the original order is returned unchanged and no
+            second charge is attempted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "400":
+          description: Malformed request body
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401":
+          description: Missing or malformed Bearer token
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "406":
+          description: Client cannot accept application/json
+        "422":
+          description: Payment declined by the bank
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After: { schema: { type: integer } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "503":
+          description: Payments service unreachable after retries
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
     get:
-      summary: List a student's orders
+      summary: List orders (filter, sort, paginate)
       parameters:
         - in: query
           name: student
-          schema:
-            type: integer
+          schema: { type: integer }
+          description: Filter to a single student's orders
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 10 }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [createdAt, id], default: createdAt }
+        - in: query
+          name: order
+          schema: { type: string, enum: [asc, desc], default: asc }
       responses:
-        "200": { description: List of orders }
+        "200":
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Order" }
+        "400":
+          description: Invalid query parameters
+        "401":
+          description: Missing or malformed Bearer token
+    options:
+      summary: Discover the methods supported on /orders (A5)
+      responses:
+        "204":
+          description: No Content
+          headers:
+            Allow:
+              schema: { type: string, example: "GET, POST, OPTIONS" }
+
   /orders/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: integer }
     get:
       summary: Read a single order
       parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
+        - $ref: "#/components/parameters/IfNoneMatch"
       responses:
-        "200": { description: Order details }
-        "404": { description: Order not found }
+        "200":
+          description: Order details
+          headers:
+            ETag: { schema: { type: string } }
+            Cache-Control: { schema: { type: string, example: "private, max-age=60" } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "304":
+          description: >
+            Not Modified (C1) — the client's If-None-Match matched the
+            current ETag; body is empty.
+        "401":
+          description: Missing or malformed Bearer token
+        "404":
+          description: Order not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+    delete:
+      summary: Delete an order (stub — accepts the verb, does not remove state; see NOTES.md A2/A5)
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Missing or malformed Bearer token
+        "404":
+          description: Order not found
+
   /orders/{id}/cancel:
     post:
-      summary: Cancel an order
+      summary: Cancel an order (non-CRUD action, A2)
       parameters:
         - in: path
           name: id
           required: true
-          schema:
-            type: integer
+          schema: { type: integer }
+        - $ref: "#/components/parameters/IfMatch"
       responses:
-        "202": { description: Cancellation accepted }
-        "404": { description: Order not found }
-        "409": { description: State conflict }
+        "202":
+          description: Cancellation accepted; order status is now "cancelled"
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: integer }
+                  status: { type: string }
+        "401":
+          description: Missing or malformed Bearer token
+        "404":
+          description: Order not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "409":
+          description: Order is not in a cancellable state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412":
+          description: >
+            Precondition Failed (C2) — the supplied If-Match no longer
+            matches the order's current ETag; the client read a stale
+            version and must GET again before retrying.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: false
+      schema: { type: string }
+      description: >
+        Client-generated key (C3). Replaying the same key returns the
+        original order instead of creating a duplicate and re-charging.
+    IfNoneMatch:
+      in: header
+      name: If-None-Match
+      required: false
+      schema: { type: string }
+      description: Conditional GET (C1); matching value yields 304.
+    IfMatch:
+      in: header
+      name: If-Match
+      required: false
+      schema: { type: string }
+      description: Conditional write (C2); stale value yields 412.
   schemas:
     OrderRequest:
       type: object
@@ -69,3 +233,24 @@ components:
         itemId: { type: integer }
         qty: { type: integer, minimum: 1 }
         paymentMethodId: { type: string }
+    Order:
+      type: object
+      properties:
+        id: { type: integer }
+        studentId: { type: integer }
+        itemId: { type: integer }
+        qty: { type: integer }
+        status: { type: string, enum: [placed, cancelled] }
+        createdAt: { type: string, format: date-time }
+    Problem:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        errors:
+          type: array
+          items:
+            type: array
+            items: { type: string }
