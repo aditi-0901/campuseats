@@ -5,20 +5,39 @@ const { problem } = require('./errors');
 const { validateOrderRequest, validateListQuery } = require('./validation');
 const { sendOrder } = require('./representation');
 
+const PAYMENTS_RETRY_AFTER_SECONDS = 30;
+
 const app = express();
-app.use(express.json());
 
 // ===============================
-// Malformed-JSON handling (Assignment 6, C1/C4 boundary with the old A5
-// 400 behaviour): if the body cannot even be *parsed* as JSON, that is a
-// 400 (the request itself is broken) — distinct from a body that parses
-// fine but fails validation, which is a 422 (see validation.js and the
-// POST /orders handler). body-parser's json() middleware throws
-// synchronously on bad JSON and hands the error to Express's error
-// pipeline; the catch-all error handler at the bottom of this file is
-// what actually answers it (Express searches forward for the next
-// error-handling middleware, so one handler at the end covers this).
+// Headers that belong on EVERY response — errors included (C4/B1).
+// These sit above express.json() on purpose: if body-parser rejects a
+// request (malformed JSON, body too large) it answers from the error
+// handler at the bottom, and that response must still carry nosniff,
+// HSTS and CORS exactly like any other.
 // ===============================
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    // Documents intent for production; this dev server itself runs on plain HTTP.
+    res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
+
+    // CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match'
+    );
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+
+    // /orders has its own OPTIONS handler below that sets a resource-specific
+    // Allow header (A5); everything else gets a generic CORS preflight reply.
+    if (req.method === 'OPTIONS' && req.path !== '/orders') {
+        return res.status(204).send();
+    }
+    next();
+});
+
+app.use(express.json());
 
 app.use((req, res, next) => {
     const accept = req.headers.accept;
@@ -38,16 +57,6 @@ app.use((req, res, next) => {
         );
     }
 
-    next();
-});
-
-// ===============================
-// B7: Security & general headers
-// ===============================
-app.use((req, res, next) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    // Documents intent for production; this dev server itself runs on plain HTTP.
-    res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
     next();
 });
 
@@ -99,37 +108,14 @@ function _resetRateLimit() {
     rateLimit.clear();
 }
 
-// ===============================
-// B6: CORS
-// ===============================
-app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-
-    res.setHeader(
-        'Access-Control-Allow-Headers',
-        'Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match'
-    );
-
-    res.setHeader(
-        'Access-Control-Allow-Methods',
-        'GET, POST, DELETE, OPTIONS'
-    );
-
-    // /orders has its own OPTIONS handler below that sets a resource-specific
-    // Allow header (A5); everything else gets a generic CORS preflight reply.
-    if (req.method === 'OPTIONS' && req.path !== '/orders') {
-        return res.status(204).send();
-    }
-
-    next();
-});
-
 app.use(rateLimiter);
 
 function requireBearer(req, res, next) {
     const auth = req.headers.authorization;
 
     if (!auth || !auth.startsWith('Bearer ') || !auth.slice(7).trim()) {
+        // RFC 9110 §11.6.1: a 401 must say how to authenticate.
+        res.setHeader('WWW-Authenticate', 'Bearer');
         return problem(
             res,
             401,
@@ -182,6 +168,8 @@ app.post('/orders', requireBearer, async (req, res) => {
         // real detail server-side; return a clean, stable one to the
         // client. See NOTES.md Q6.
         console.error(`[orders] payments call failed (student ${req.body.studentId}, item ${req.body.itemId}): ${error.message}`);
+        // A4: a 503 is transient by definition — tell the client when to retry.
+        res.setHeader('Retry-After', String(PAYMENTS_RETRY_AFTER_SECONDS));
         return problem(
             res,
             503,
@@ -265,6 +253,9 @@ app.delete('/orders/:id', requireBearer, (req, res) => {
         return problem(res, 404, "order-not-found", `No order ${req.params.id}`);
     }
 
+    // A2: 204 must mean "it is gone", so actually remove it. A second
+    // DELETE of the same id therefore answers 404 order-not-found.
+    store.remove(o.id);
     res.setHeader('Cache-Control', 'no-store');
     return res.status(204).send();
 });
@@ -306,16 +297,41 @@ app.options('/orders', (req, res) => {
 });
 
 // ===============================
+// B1: unknown route / wrong method. Without this, Express answers with its
+// own HTML "Cannot GET /x" page — a failure that is NOT Problem Details.
+// A path that exists but not for this verb is 405 + Allow; anything else
+// is 404. The detail never echoes the caller's path back (nothing
+// user-controlled is reflected into the body).
+// ===============================
+const KNOWN_PATHS = [
+    [/^\/orders\/?$/, 'GET, POST, OPTIONS'],
+    [/^\/orders\/[^/]+\/?$/, 'GET, DELETE'],
+    [/^\/orders\/[^/]+\/cancel\/?$/, 'POST'],
+];
+
+app.use((req, res) => {
+    const known = KNOWN_PATHS.find(([re]) => re.test(req.path));
+    if (known) {
+        res.setHeader('Allow', known[1]);
+        return problem(res, 405, "method-not-allowed", `This endpoint supports: ${known[1]}.`);
+    }
+    return problem(res, 404, "route-not-found", "No such endpoint.");
+});
+
+// ===============================
 // Catch-all error handler (4 args — Express recognises this as
 // error-handling middleware and routes every next(err) / thrown error
-// here, including body-parser's JSON-parse failures from express.json()
-// above). B4: this is the service's last line of defence against leaking
-// an internal error to a caller — anything unexpected is logged with its
-// real detail server-side and answered with one clean, generic body.
+// here, including body-parser failures from express.json() above).
+// B4: the service's last line of defence against leaking internals —
+// anything unexpected is logged with its real detail (stack included)
+// server-side and answered with one clean, generic body.
 // ===============================
 app.use((err, req, res, next) => {
     if (err && (err.type === 'entity.parse.failed' || err instanceof SyntaxError)) {
         return problem(res, 400, "malformed-json", "Request body is not valid JSON.");
+    }
+    if (err && err.type === 'entity.too.large') {
+        return problem(res, 413, "payload-too-large", "Request body exceeds the size limit.");
     }
     console.error(`[orders] unhandled error: ${err && err.stack ? err.stack : err}`);
     return problem(res, 500, "internal-error", "Something went wrong on our end.");

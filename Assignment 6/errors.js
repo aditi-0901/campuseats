@@ -1,16 +1,16 @@
-// errors.js
+// errors.js — Assignment 6, Part B.
 //
-// Assignment 6, Part B (carried forward because Part C's 422 depends on it
-// directly — see NOTES.md "Note on scope"):
-//   - B1: every failure goes through problem(), and every failure now sets
-//     Content-Type: application/problem+json (not plain application/json).
-//   - B2: the type catalogue below is CampusEats' own — it keeps the four
-//     generic strings that genuinely describe something this service does
-//     (payment-declined, order-not-found, illegal-transition,
-//     rate-limit-exceeded) and adds the ones CampusEats' actual Order
-//     model needs (validation-failed, malformed-json, ...). "empty-cart"
-//     and "item-unavailable" from the assignment's own example list are
-//     deliberately NOT here — see NOTES.md Q2 for why.
+//   - B1: EVERY failure goes through problem() — including the ones Express
+//     would otherwise answer itself (unknown route, wrong method, body too
+//     large, unexpected exception; see the tail of app.js). One shape:
+//     type / title / status / detail [/ errors], served as
+//     application/problem+json.
+//   - B2: the type catalogue below is CampusEats' own. It keeps the strings
+//     from the assignment's example list that describe something this
+//     service really does (payment-declined, order-not-found,
+//     illegal-transition) and adds the ones CampusEats' Order model needs.
+//     "empty-cart" and "item-unavailable" are deliberately NOT here —
+//     see NOTES.md B2.
 
 const TITLES = {
     "malformed-json": "Malformed JSON body",
@@ -25,6 +25,9 @@ const TITLES = {
     "unauthorized": "Unauthorized",
     "rate-limit-exceeded": "Too many requests",
     "internal-error": "Internal error",
+    "route-not-found": "No such endpoint",
+    "method-not-allowed": "Method not allowed",
+    "payload-too-large": "Request body too large",
 };
 
 /**

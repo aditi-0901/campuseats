@@ -1,32 +1,46 @@
 > npx jest
 
-  console.error
-    [orders] payments call failed (student 101, item 5): connect ECONNREFUSED 127.0.0.1:8080
-  (expected — this is the B4 test deliberately forcing a payments outage; the
-   line above is the server-side log. The client-facing response in that same
-   test asserts the raw "ECONNREFUSED"/IP text never appears in the body.)
+NOTE — two server-side log lines print during the run. Both are EXPECTED and
+are the proof of B4 (internals are logged server-side, never sent to the client):
+  - "[orders] payments call failed ... ECONNREFUSED"  (payments-outage tests)
+  - "[orders] unhandled error: Error: SQLITE_ERROR ..." (the 500 fault-injection test)
+The client-facing responses in those same tests assert that none of that text
+ever appears in the response body.
 
 PASS ./orders.test.js
-  ✓ create order returns 201 with Location header (79 ms)
-  ✓ same idempotency key returns original 200 (C3, Assignment 5) (10 ms)
-  ✓ unknown order id returns 404 (5 ms)
-  ✓ missing bearer token is rejected with 401 (5 ms)
-  ✓ conditional GET returns 304 when If-None-Match matches (C1, Assignment 5) (8 ms)
-  ✓ conditional cancel is rejected with 412 on a stale If-Match (C2, Assignment 5) (8 ms)
-  ✓ cancel with a matching If-Match succeeds (C2, Assignment 5) (9 ms)
-  ✓ cancelling an already-cancelled order returns 409 illegal-transition (10 ms)
-  ✓ C1/C2: one bad field returns 422 with a field-level errors[] entry (4 ms)
-  ✓ C2: two bad fields in one request are BOTH reported in a single 422 (NOTES.md Q4) (3 ms)
-  ✓ C1: a missing field and a wrong-type field are reported together (3 ms)
-  ✓ truly malformed JSON (unparsable body) returns 400, not 422 (12 ms)
+  ✓ create order returns 201 with Location header (46 ms)
+  ✓ same idempotency key returns original 200 (C3, Assignment 5) (6 ms)
+  ✓ unknown order id returns 404 (3 ms)
+  ✓ missing bearer token is rejected with 401 (3 ms)
+  ✓ conditional GET returns 304 when If-None-Match matches (C1, Assignment 5) (5 ms)
+  ✓ conditional cancel is rejected with 412 on a stale If-Match (C2, Assignment 5) (5 ms)
+  ✓ cancel with a matching If-Match succeeds (C2, Assignment 5) (5 ms)
+  ✓ cancelling an already-cancelled order returns 409 illegal-transition (6 ms)
+  ✓ C1/C2: one bad field returns 422 with a field-level errors[] entry (3 ms)
+  ✓ C2: two bad fields in one request are BOTH reported in a single 422 (NOTES.md Q4) (2 ms)
+  ✓ C1: a missing field and a wrong-type field are reported together (2 ms)
+  ✓ truly malformed JSON (unparsable body) returns 400, not 422 (8 ms)
   ✓ every Problem Details body is served as application/problem+json (B1) (2 ms)
-  ✓ C3: Accept: application/xml returns an XML representation of the order (5 ms)
-  ✓ C3: Accept: application/json still returns JSON (the documented default) (9 ms)
-  ✓ C3: an Accept the service cannot produce returns 406 (2 ms)
-  ✓ B4: a payments outage never leaks the raw transport error to the client (25 ms)
+  ✓ C3: Accept: application/xml returns an XML representation of the order (3 ms)
+  ✓ C3: Accept: application/json still returns JSON (the documented default) (7 ms)
+  ✓ C3: an Accept the service cannot produce returns 406 (1 ms)
+  ✓ B4: a payments outage never leaks the raw transport error to the client (17 ms)
+  ✓ A2: DELETE really deletes — 204, then the order is gone (404), and a repeat DELETE is 404 (8 ms)
+  ✓ A2: no failure is ever answered with a 2xx — every failure body has a 4xx/5xx status (10 ms)
+  ✓ A4: 503 payments-unavailable carries Retry-After (2 ms)
+  ✓ A4: 429 rate-limit-exceeded carries Retry-After (13 ms)
+  ✓ A4: 4xx client errors never carry Retry-After (retrying them unchanged is pointless) (5 ms)
+  ✓ B1: every failure path answers with the same Problem Details shape (18 ms)
+  ✓ B1: unknown route is a Problem Details 404 (not Express's HTML page) (2 ms)
+  ✓ B1: wrong method on a real path is 405 with an Allow header (1 ms)
+  ✓ B1: 401 says how to authenticate (WWW-Authenticate: Bearer) (3 ms)
+  ✓ B1/C4: even a body-parser failure carries the security + CORS headers (4 ms)
+  ✓ B2: each documented failure produces exactly its catalogue type (7 ms)
+  ✓ B4: an unexpected exception becomes a clean 500 — no stack, no message (4 ms)
+  ✓ B4: an oversized body is a clean 413, not a 500 or a parser error dump (7 ms)
 
 Test Suites: 1 passed, 1 total
-Tests:       17 passed, 17 total
+Tests:       30 passed, 30 total
 Snapshots:   0 total
-Time:        0.631 s
+Time:        0.525 s, estimated 1 s
 Ran all test suites.
