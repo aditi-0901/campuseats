@@ -1,0 +1,3 @@
+openapi.yaml: OK
+---
+openapi-spec-validator version: 0.9.0
