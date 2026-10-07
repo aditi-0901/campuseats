@@ -1,0 +1,32 @@
+> npx jest
+
+  console.error
+    [orders] payments call failed (student 101, item 5): connect ECONNREFUSED 127.0.0.1:8080
+  (expected — this is the B4 test deliberately forcing a payments outage; the
+   line above is the server-side log. The client-facing response in that same
+   test asserts the raw "ECONNREFUSED"/IP text never appears in the body.)
+
+PASS ./orders.test.js
+  ✓ create order returns 201 with Location header (79 ms)
+  ✓ same idempotency key returns original 200 (C3, Assignment 5) (10 ms)
+  ✓ unknown order id returns 404 (5 ms)
+  ✓ missing bearer token is rejected with 401 (5 ms)
+  ✓ conditional GET returns 304 when If-None-Match matches (C1, Assignment 5) (8 ms)
+  ✓ conditional cancel is rejected with 412 on a stale If-Match (C2, Assignment 5) (8 ms)
+  ✓ cancel with a matching If-Match succeeds (C2, Assignment 5) (9 ms)
+  ✓ cancelling an already-cancelled order returns 409 illegal-transition (10 ms)
+  ✓ C1/C2: one bad field returns 422 with a field-level errors[] entry (4 ms)
+  ✓ C2: two bad fields in one request are BOTH reported in a single 422 (NOTES.md Q4) (3 ms)
+  ✓ C1: a missing field and a wrong-type field are reported together (3 ms)
+  ✓ truly malformed JSON (unparsable body) returns 400, not 422 (12 ms)
+  ✓ every Problem Details body is served as application/problem+json (B1) (2 ms)
+  ✓ C3: Accept: application/xml returns an XML representation of the order (5 ms)
+  ✓ C3: Accept: application/json still returns JSON (the documented default) (9 ms)
+  ✓ C3: an Accept the service cannot produce returns 406 (2 ms)
+  ✓ B4: a payments outage never leaks the raw transport error to the client (25 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       17 passed, 17 total
+Snapshots:   0 total
+Time:        0.631 s
+Ran all test suites.
