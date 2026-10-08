@@ -1,0 +1,714 @@
+CampusEats Order Service — Assignment 6 curl transcript (Parts A, B, C, D)
+Captured against: node dummy_bank.js (port 8080) + node app.js (port 8081)
+The service is restarted between some groups of sections (noted inline)
+purely to give each group a clean 10-request rate-limit budget (B5) — a
+fresh process means a fresh in-memory rate-limit table. All ids and
+timestamps below are from this one live run.
+
+Index
+  D1-a/b  success path, Location header, idempotent replay          (A3, D1)
+  D2-a..c validation 422 (two bad fields), malformed JSON 400        (B3, C2)
+  D2-d    unknown id 404                                             (A1)
+  D2-e    card declined 422                                          (A1)
+  D2-f    missing token 401 + WWW-Authenticate                       (A1, B1)
+  D2-g/h  illegal transition 409, stale If-Match 412                 (A1)
+  D2-i    rate limit 429 + Retry-After                               (A4)
+  D2-j/k  unknown route 404, wrong method 405 + Allow                (B1)
+  D2-l    payments down 503 + Retry-After, detail hidden             (A4, B4)
+  D2-m    oversized body 413                                         (B4)
+  D2-n    unexpected exception 500, internals hidden (fault inject)  (B4)
+  D2-o    DELETE really deletes: 204, then 404, then 404 again       (A2)
+  D3-a..e conditional GET 304, XML / JSON negotiation, 406           (C3, D3)
+  D4      regression check                                           (D4)
+
+
+=================================================================
+D1-a. Success path: POST /orders -> 201, Location: /orders/{id}, JSON body (A3)
+=================================================================
+HTTP/1.1 201 Created
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 9
+Location: /orders/1
+Vary: Accept
+Content-Type: application/json; charset=utf-8
+Content-Length: 100
+ETag: W/"64-0+FknVK6b9YGnET9ArksrsBVtT0"
+Date: Wed, 07 Oct 2026 19:45:07 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":1,"studentId":101,"itemId":5,"qty":2,"status":"placed","createdAt":"2026-10-07T19:45:07.381Z"}
+
+
+=================================================================
+D1-b. Idempotent repeat: same Idempotency-Key -> 200, original order, no second charge
+=================================================================
+HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 8
+Vary: Accept
+Content-Type: application/json; charset=utf-8
+Content-Length: 100
+ETag: W/"64-0+FknVK6b9YGnET9ArksrsBVtT0"
+Date: Wed, 07 Oct 2026 19:45:07 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":1,"studentId":101,"itemId":5,"qty":2,"status":"placed","createdAt":"2026-10-07T19:45:07.381Z"}
+
+
+=================================================================
+D2-a. Field-level 422: TWO bad fields in one request (studentId wrong type, qty <= 0) — NOTES.md B3
+=================================================================
+HTTP/1.1 422 Unprocessable Entity
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 7
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 248
+ETag: W/"f8-7fOPIyHfZSMdLLb6LDl7ltmI/2w"
+Date: Wed, 07 Oct 2026 19:45:07 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/validation-failed","title":"Request failed validation","status":422,"detail":"The request body failed validation.","errors":[{"field":"studentId","reason":"required integer"},{"field":"qty","reason":"required integer, minimum 1"}]}
+
+
+=================================================================
+D2-b. Two missing fields collected together (itemId and paymentMethodId both missing)
+=================================================================
+HTTP/1.1 422 Unprocessable Entity
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 6
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 255
+ETag: W/"ff-xG+zv/z0ngfNETq1QJyD8zbq4zU"
+Date: Wed, 07 Oct 2026 19:45:07 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/validation-failed","title":"Request failed validation","status":422,"detail":"The request body failed validation.","errors":[{"field":"itemId","reason":"required integer"},{"field":"paymentMethodId","reason":"required non-empty string"}]}
+
+
+=================================================================
+D2-c. Truly malformed JSON -> 400, not 422 (note: still carries nosniff/CORS headers)
+=================================================================
+HTTP/1.1 400 Bad Request
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 119
+ETag: W/"77-gtFET1t6rzPv5Do6FYRQfVrF+WE"
+Date: Wed, 07 Oct 2026 19:45:07 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/malformed-json","title":"Malformed JSON body","status":400,"detail":"Request body is not valid JSON."}
+
+
+=================================================================
+D2-d. Unknown order id -> 404 order-not-found
+=================================================================
+HTTP/1.1 404 Not Found
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 5
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 97
+ETag: W/"61-0aGnp8BnAjU54gcc0Hv1xY6nHU0"
+Date: Wed, 07 Oct 2026 19:45:07 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/order-not-found","title":"Order not found","status":404,"detail":"No order 999"}
+
+
+=================================================================
+D2-e. Payment declined by the bank -> 422 payment-declined
+=================================================================
+HTTP/1.1 422 Unprocessable Entity
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 4
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 100
+ETag: W/"64-gfb0ixWbDFPhsxmBUF72m0XoOSc"
+Date: Wed, 07 Oct 2026 19:45:07 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/payment-declined","title":"Payment declined","status":422,"detail":"Card declined"}
+
+
+=================================================================
+D2-f. Missing Bearer token -> 401 unauthorized, with WWW-Authenticate: Bearer
+=================================================================
+HTTP/1.1 401 Unauthorized
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 3
+WWW-Authenticate: Bearer
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 100
+ETag: W/"64-cTWNwcsqzOtVDJQRvvhY6Bgcm0s"
+Date: Wed, 07 Oct 2026 19:45:07 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/unauthorized","title":"Unauthorized","status":401,"detail":"Bearer token required"}
+
+[service restarted: fresh rate-limit budget]
+
+
+=================================================================
+D2-g. Illegal state transition: cancel an order twice -> second call is 409 illegal-transition
+=================================================================
+--- creating order 1 ---
+HTTP/1.1 201 Created
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 9
+Location: /orders/1
+Vary: Accept
+Content-Type: application/json; charset=utf-8
+Content-Length: 100
+ETag: W/"64-1TK8gl1a1ol+4L9wf5OS4SztVOE"
+Date: Wed, 07 Oct 2026 19:45:08 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":1,"studentId":101,"itemId":5,"qty":2,"status":"placed","createdAt":"2026-10-07T19:45:08.072Z"}
+--- cancelling it the first time -> 202 ---
+HTTP/1.1 202 Accepted
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 8
+ETag: "order-1-cancelled-2026-10-07T19:45:08.072Z"
+Cache-Control: no-store
+Content-Type: application/json; charset=utf-8
+Content-Length: 29
+Date: Wed, 07 Oct 2026 19:45:08 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":1,"status":"cancelled"}
+--- cancelling it again -> 409 ---
+HTTP/1.1 409 Conflict
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 7
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 162
+ETag: W/"a2-IUp7+BYFAwaA0yJ/k64qSW/LRQE"
+Date: Wed, 07 Oct 2026 19:45:08 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/illegal-transition","title":"Illegal order state transition","status":409,"detail":"Cannot cancel an order whose status is already 'cancelled'."}
+
+
+=================================================================
+D2-h. Stale If-Match on cancel -> 412 precondition-failed
+=================================================================
+--- creating order 2 ---
+HTTP/1.1 201 Created
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 6
+Location: /orders/2
+Vary: Accept
+Content-Type: application/json; charset=utf-8
+Content-Length: 100
+ETag: W/"64-FO/Ug32eqB/4UuzvMjgMNLxT5d8"
+Date: Wed, 07 Oct 2026 19:45:08 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":2,"studentId":101,"itemId":5,"qty":2,"status":"placed","createdAt":"2026-10-07T19:45:08.088Z"}
+--- cancelling order 2 with a deliberately stale If-Match ---
+HTTP/1.1 412 Precondition Failed
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 5
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 197
+ETag: W/"c5-BA2sdKjS3lI42yRm+vKzv6+lJg0"
+Date: Wed, 07 Oct 2026 19:45:08 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/precondition-failed","title":"Order was modified since you last read it","status":412,"detail":"Order has changed since you last read it; GET it again and retry with the new ETag"}
+
+[service restarted: fresh rate-limit budget]
+
+
+=================================================================
+D2-i. Rate limit exceeded -> 429 with Retry-After (10-request budget per client, B5)
+=================================================================
+request #1 -> 200
+request #2 -> 200
+request #3 -> 200
+request #4 -> 200
+request #5 -> 200
+request #6 -> 200
+request #7 -> 200
+request #8 -> 200
+request #9 -> 200
+request #10 -> 200
+request #11 -> 429
+
+Full response of the 12th request (still over budget):
+HTTP/1.1 429 Too Many Requests
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 0
+Retry-After: 60
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 108
+ETag: W/"6c-kHxkDqbrzqwCrhQBxegn3pXCpIA"
+Date: Wed, 07 Oct 2026 19:45:08 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/rate-limit-exceeded","title":"Too many requests","status":429,"detail":"Too many requests"}
+
+[service restarted: fresh rate-limit budget]
+
+
+=================================================================
+D2-j. Unknown route -> 404 route-not-found (Problem Details, not Express's HTML page)
+=================================================================
+HTTP/1.1 404 Not Found
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 9
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 103
+ETag: W/"67-wG1m82Om106tbLJuDBN+WZacNEs"
+Date: Wed, 07 Oct 2026 19:45:09 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/route-not-found","title":"No such endpoint","status":404,"detail":"No such endpoint."}
+
+
+=================================================================
+D2-k. Wrong method on a real path -> 405 method-not-allowed, with Allow header
+=================================================================
+HTTP/1.1 405 Method Not Allowed
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 8
+Allow: GET, DELETE
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 127
+ETag: W/"7f-/+tnngAq08WT523ThR23IAUjWTg"
+Date: Wed, 07 Oct 2026 19:45:09 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/method-not-allowed","title":"Method not allowed","status":405,"detail":"This endpoint supports: GET, DELETE."}
+
+
+=================================================================
+D2-m. Oversized request body (200 KB) -> 413 payload-too-large
+=================================================================
+HTTP/1.1 413 Payload Too Large
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 130
+ETag: W/"82-/+Lh2YqruPzB5jODH4AdrrEQip0"
+Date: Wed, 07 Oct 2026 19:45:09 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/payload-too-large","title":"Request body too large","status":413,"detail":"Request body exceeds the size limit."}
+
+
+=================================================================
+D2-o. DELETE really deletes (A2): create -> DELETE 204 -> GET 404 -> DELETE again 404
+=================================================================
+--- create order 1 ---
+HTTP/1.1 201 Created
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 7
+Location: /orders/1
+Vary: Accept
+Content-Type: application/json; charset=utf-8
+Content-Length: 100
+ETag: W/"64-Ktdl4R3VFcgm/BFqHCD2eeiYPDA"
+Date: Wed, 07 Oct 2026 19:45:09 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":1,"studentId":101,"itemId":5,"qty":2,"status":"placed","createdAt":"2026-10-07T19:45:09.452Z"}
+--- DELETE /orders/1 -> 204 ---
+HTTP/1.1 204 No Content
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 6
+Cache-Control: no-store
+Date: Wed, 07 Oct 2026 19:45:09 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+
+--- GET /orders/1 afterwards -> 404 (it is really gone) ---
+HTTP/1.1 404 Not Found
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 5
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 95
+ETag: W/"5f-SpxWFoAsaKI8Rf7oN3dyKROiCaM"
+Date: Wed, 07 Oct 2026 19:45:09 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/order-not-found","title":"Order not found","status":404,"detail":"No order 1"}
+--- DELETE /orders/1 again -> 404 ---
+HTTP/1.1 404 Not Found
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 4
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 95
+ETag: W/"5f-SpxWFoAsaKI8Rf7oN3dyKROiCaM"
+Date: Wed, 07 Oct 2026 19:45:09 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/order-not-found","title":"Order not found","status":404,"detail":"No order 1"}
+
+[dummy bank STOPPED; service restarted]
+
+
+=================================================================
+D2-l. Payments provider down -> 503 payments-unavailable + Retry-After (A4); raw transport error hidden (B4)
+=================================================================
+(this call takes a few seconds: the service retries the bank 3 times with backoff before giving up)
+HTTP/1.1 503 Service Unavailable
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 9
+Retry-After: 30
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 176
+ETag: W/"b0-tlJ6hawXufTKDgt+0+mmL1WsBME"
+Date: Wed, 07 Oct 2026 19:45:18 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/payments-unavailable","title":"Payments service unreachable","status":503,"detail":"The payments provider is currently unavailable. Please try again shortly."}
+--- what the SERVER logged for that same request (stays server-side, never sent to the client) ---
+[orders] payments call failed (student 101, item 5): Gave up after 3 attempts
+
+[bank back up; service restarted with a fault injected: store.create() throws a database-looking error]
+
+
+=================================================================
+D2-n. Unexpected exception -> 500 internal-error; the DB error, table name and file path are hidden (B4)
+=================================================================
+HTTP/1.1 500 Internal Server Error
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 9
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 115
+ETag: W/"73-dHjFcw/moZgDg73Mk0UqO1o9gnA"
+Date: Wed, 07 Oct 2026 19:45:19 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/internal-error","title":"Internal error","status":500,"detail":"Something went wrong on our end."}
+--- what the SERVER logged for that same request (first 3 lines; the stack stays server-side) ---
+[orders] unhandled error: Error: SQLITE_ERROR: no such table: orders (at /srv/campuseats/db.js:42)
+    at s.create ([eval]:1:66)
+    at /home/claude/a6/app.js:181:21
+
+[fault removed; service restarted normally]
+
+
+=================================================================
+D3-a. Conditional GET: create an order, then read it to capture the ETag
+=================================================================
+HTTP/1.1 201 Created
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 9
+Location: /orders/1
+Vary: Accept
+Content-Type: application/json; charset=utf-8
+Content-Length: 100
+ETag: W/"64-GoNwZz4+e02rPXrX/drjUG0tB/Q"
+Date: Wed, 07 Oct 2026 19:45:20 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":1,"studentId":101,"itemId":5,"qty":2,"status":"placed","createdAt":"2026-10-07T19:45:20.288Z"}
+HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 7
+ETag: "order-1-placed-2026-10-07T19:45:20.288Z"
+Cache-Control: private, max-age=60
+Vary: Accept
+Content-Type: application/json; charset=utf-8
+Content-Length: 100
+Date: Wed, 07 Oct 2026 19:45:20 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":1,"studentId":101,"itemId":5,"qty":2,"status":"placed","createdAt":"2026-10-07T19:45:20.288Z"}
+
+
+=================================================================
+D3-b. Conditional GET replay with that ETag in If-None-Match -> 304, empty body
+=================================================================
+HTTP/1.1 304 Not Modified
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 6
+ETag: "order-1-placed-2026-10-07T19:45:20.288Z"
+Cache-Control: private, max-age=60
+Date: Wed, 07 Oct 2026 19:45:20 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+
+
+
+=================================================================
+D3-c. Accept: application/xml -> the same order as XML (C3)
+=================================================================
+HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 5
+ETag: "order-1-placed-2026-10-07T19:45:20.288Z"
+Cache-Control: private, max-age=60
+Vary: Accept
+Content-Type: application/xml; charset=utf-8
+Content-Length: 210
+Date: Wed, 07 Oct 2026 19:45:20 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+<?xml version="1.0" encoding="UTF-8"?>
+<order>
+  <id>1</id>
+  <studentId>101</studentId>
+  <itemId>5</itemId>
+  <qty>2</qty>
+  <status>placed</status>
+  <createdAt>2026-10-07T19:45:20.288Z</createdAt>
+</order>
+
+
+
+=================================================================
+D3-d. Accept: application/json -> the same order as JSON (documented default)
+=================================================================
+HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 4
+ETag: "order-1-placed-2026-10-07T19:45:20.288Z"
+Cache-Control: private, max-age=60
+Vary: Accept
+Content-Type: application/json; charset=utf-8
+Content-Length: 100
+Date: Wed, 07 Oct 2026 19:45:20 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":1,"studentId":101,"itemId":5,"qty":2,"status":"placed","createdAt":"2026-10-07T19:45:20.288Z"}
+
+
+=================================================================
+D3-e. An Accept the service cannot produce (text/html) -> 406 not-acceptable
+=================================================================
+HTTP/1.1 406 Not Acceptable
+X-Powered-By: Express
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, Idempotency-Key, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+Cache-Control: no-store
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 144
+ETag: W/"90-jsT+H7bEBjonxJbaX5FF/yg4CrE"
+Date: Wed, 07 Oct 2026 19:45:20 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/not-acceptable","title":"Not acceptable","status":406,"detail":"This service can produce application/json or application/xml."}
+
+
+=================================================================
+D4. Regression check: Assignment 5's checks still hold on this build
+=================================================================
+Re-ran orders.test.js (every A5 idempotency / ETag / If-Match test plus the
+Assignment 6 ones) — see jest-output.txt: 30/30 passed.
+The live idempotency-key replay (D1-b) and conditional-GET 304 (D3-b) above
+are the same two A5 behaviours, demonstrated live on this build.

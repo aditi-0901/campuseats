@@ -1,0 +1,383 @@
+openapi: 3.0.3
+info:
+  title: CampusEats Orders
+  version: "6.0.0"
+  description: >
+    Order Service for CampusEats. Every endpoint requires a Bearer token and
+    is subject to per-client rate limiting (X-RateLimit-* headers on every
+    response); CORS is enabled everywhere.
+
+
+    **Assignment 6 — honest responses.**
+    (A) The status code is the result: no failure is ever a 2xx; POST
+    /orders returns 201 + Location; 429 and 503 carry Retry-After.
+    (B) Every failure — including unknown routes, wrong methods, oversized
+    bodies and unexpected exceptions — is one Problem Details shape
+    (type / title / status / detail [/ errors]) served as
+    application/problem+json; internals are never sent to the client.
+    (C) POST /orders validates its whole body first and returns a single 422
+    listing every bad field; GET /orders/{id} negotiates JSON (default) or
+    XML. Every response labels its body with Content-Type + charset.
+
+
+    **Not described per-path (applies to the whole service):** a request to
+    an unknown path is 404 `route-not-found`; a known path with an
+    unsupported method is 405 `method-not-allowed` with an `Allow` header.
+    Both are Problem Details.
+servers:
+  - url: http://localhost:8081
+
+security:
+  - bearerAuth: []
+
+paths:
+  /orders:
+    post:
+      summary: Place a new order
+      description: >
+        The body is validated in full before any work (payment included) is
+        done. A validation failure is always ONE 422 listing every bad
+        field. Retry-safe via `Idempotency-Key`.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OrderRequest" }
+      responses:
+        "201":
+          description: Order created. `Location` points at the new order.
+          headers:
+            Location:
+              description: URL of the newly created order
+              schema: { type: string, example: "/orders/1" }
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "200":
+          description: >
+            Idempotent replay — the same Idempotency-Key was seen before, so
+            the original order is returned and no second charge is made.
+            (A deliberate dedup result, not a failure.)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "400":
+          description: Body is not parseable JSON (`malformed-json`). Never reached validation.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "406": { $ref: "#/components/responses/NotAcceptable" }
+        "413":
+          description: Body exceeds the size limit (`payload-too-large`).
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "422":
+          description: >
+            Either `validation-failed` (parsed, but one or more field checks
+            failed — `errors[]` lists every bad field) or `payment-declined`
+            (valid body, the bank refused — see `detail`).
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+              examples:
+                twoBadFields:
+                  summary: Two bad fields reported at once
+                  value:
+                    type: /errors/validation-failed
+                    title: Request failed validation
+                    status: 422
+                    detail: The request body failed validation.
+                    errors:
+                      - { field: studentId, reason: required integer }
+                      - { field: qty, reason: "required integer, minimum 1" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+        "503":
+          description: >
+            Payments provider unreachable after retries (`payments-unavailable`).
+            Transient — safe to retry after `Retry-After` seconds, with the
+            same Idempotency-Key. `detail` is a clean, fixed message; the real
+            cause is logged server-side only.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying
+              schema: { type: integer, example: 30 }
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+    get:
+      summary: List orders (filter, sort, paginate)
+      parameters:
+        - in: query
+          name: student
+          schema: { type: integer }
+          description: Filter to a single student's orders
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, default: 10 }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [createdAt, id], default: createdAt }
+        - in: query
+          name: order
+          schema: { type: string, enum: [asc, desc], default: asc }
+      responses:
+        "200":
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Order" }
+        "400":
+          description: Invalid query parameters (`invalid-query`) — every bad parameter reported together in `errors[]`.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    options:
+      summary: Discover the methods supported on /orders
+      responses:
+        "204":
+          description: No Content
+          headers:
+            Allow:
+              schema: { type: string, example: "GET, POST, OPTIONS" }
+
+  /orders/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: integer }
+    get:
+      summary: Read a single order (JSON or XML)
+      description: >
+        Supports conditional GET (`If-None-Match` -> 304) and content
+        negotiation: JSON by default, XML when `Accept: application/xml`.
+      parameters:
+        - $ref: "#/components/parameters/IfNoneMatch"
+        - $ref: "#/components/parameters/Accept"
+      responses:
+        "200":
+          description: The order, as JSON (default) or XML depending on Accept
+          headers:
+            ETag: { schema: { type: string } }
+            Cache-Control: { schema: { type: string, example: "private, max-age=60" } }
+            Vary: { schema: { type: string, example: "Accept" } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+            application/xml:
+              schema: { $ref: "#/components/schemas/Order" }
+        "304":
+          description: Not Modified — `If-None-Match` matched the current ETag; empty body.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/OrderNotFound" }
+        "406": { $ref: "#/components/responses/NotAcceptable" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    delete:
+      summary: Delete an order
+      description: >
+        Removes the order. 204 means it is really gone: a following GET is
+        404, and repeating the DELETE is 404 `order-not-found`.
+      responses:
+        "204":
+          description: Deleted
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/OrderNotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /orders/{id}/cancel:
+    post:
+      summary: Cancel an order (non-CRUD action)
+      description: Retry-safe via `If-Match`.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "202":
+          description: Cancellation accepted; the order's status is now "cancelled".
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: integer }
+                  status: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/OrderNotFound" }
+        "409":
+          description: The order is not in a cancellable state (`illegal-transition`).
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412":
+          description: >
+            `precondition-failed` — the supplied `If-Match` no longer matches
+            the order's current ETag; GET it again before retrying.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: false
+      schema: { type: string }
+      description: Client-generated key. Replaying it returns the original order instead of creating and charging again.
+    IfNoneMatch:
+      in: header
+      name: If-None-Match
+      required: false
+      schema: { type: string }
+      description: Conditional GET; a matching value yields 304.
+    IfMatch:
+      in: header
+      name: If-Match
+      required: false
+      schema: { type: string }
+      description: Conditional write; a stale value yields 412.
+    Accept:
+      in: header
+      name: Accept
+      required: false
+      schema: { type: string, default: "application/json" }
+      description: application/json (default) or application/xml. Anything else is 406.
+
+  responses:
+    Unauthorized:
+      description: Missing or malformed Bearer token (`unauthorized`).
+      headers:
+        WWW-Authenticate:
+          description: How to authenticate
+          schema: { type: string, example: Bearer }
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    NotAcceptable:
+      description: Accept matches neither application/json nor application/xml (`not-acceptable`).
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    OrderNotFound:
+      description: No order with that id (`order-not-found`).
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    RateLimited:
+      description: Per-client budget exceeded (`rate-limit-exceeded`). Transient — retry after `Retry-After`.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying
+          schema: { type: integer, example: 60 }
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    InternalError:
+      description: >
+        Anything unexpected (`internal-error`). Always the same clean body —
+        no stack trace, no database message, no file paths; the real detail
+        is logged server-side.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+          example:
+            type: /errors/internal-error
+            title: Internal error
+            status: 500
+            detail: Something went wrong on our end.
+
+  schemas:
+    OrderRequest:
+      type: object
+      required: [studentId, itemId, qty, paymentMethodId]
+      description: One line item per order (CampusEats' actual order shape).
+      properties:
+        studentId: { type: integer }
+        itemId: { type: integer }
+        qty: { type: integer, minimum: 1 }
+        paymentMethodId: { type: string, minLength: 1 }
+    Order:
+      type: object
+      properties:
+        id: { type: integer }
+        studentId: { type: integer }
+        itemId: { type: integer }
+        qty: { type: integer }
+        status: { type: string, enum: [placed, cancelled] }
+        createdAt: { type: string, format: date-time }
+    Problem:
+      type: object
+      description: >
+        Problem Details (RFC 9457 / 7807). Served as
+        `application/problem+json; charset=utf-8` on EVERY failure.
+      required: [type, title, status, detail]
+      properties:
+        type:
+          type: string
+          description: Stable error slug. One of the catalogue below.
+          enum:
+            - /errors/malformed-json
+            - /errors/validation-failed
+            - /errors/invalid-query
+            - /errors/payment-declined
+            - /errors/order-not-found
+            - /errors/illegal-transition
+            - /errors/precondition-failed
+            - /errors/not-acceptable
+            - /errors/unauthorized
+            - /errors/rate-limit-exceeded
+            - /errors/payments-unavailable
+            - /errors/payload-too-large
+            - /errors/route-not-found
+            - /errors/method-not-allowed
+            - /errors/internal-error
+          example: /errors/order-not-found
+        title:
+          type: string
+          description: Short human-readable summary; identical for every occurrence of the same `type`.
+          example: Order not found
+        status:
+          type: integer
+          description: The HTTP status, repeated in the body.
+          example: 404
+        detail:
+          type: string
+          description: What is specific to THIS request.
+          example: No order 999
+        errors:
+          type: array
+          description: Present only on field-level failures (422 validation-failed, 400 invalid-query). Lists every bad field, not just the first.
+          items:
+            type: object
+            required: [field, reason]
+            properties:
+              field: { type: string, example: qty }
+              reason: { type: string, example: "required integer, minimum 1" }
