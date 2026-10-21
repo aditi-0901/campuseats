@@ -1,0 +1,40 @@
+# schema.graphql -- CampusEats Catalogue service, exposed through GraphQL
+# One object type for the picked entity (MenuItem) plus its parent Outlet,
+# like the Authors / Books pair in the tutorial.
+# Fields marked with "!" are NON-NULL: the client MUST send them and the
+# server guarantees them in every response.
+
+type Outlet {
+  id: ID!
+  name: String!
+  address: String!
+  phone: String          # nullable: an outlet may have no phone number
+  isActive: Boolean!
+  menuItems: [MenuItem!]!
+}
+
+type MenuItem {
+  id: ID!
+  name: String!
+  description: String    # nullable: the client may skip it
+  price: Float!
+  isAvailable: Boolean!
+  outlet: Outlet!
+}
+
+# Query: list everything, or fetch a single outlet by its id (the WHERE clause)
+type Query {
+  outlets: [Outlet!]!
+  outlet(id: ID!): Outlet
+  menuItems: [MenuItem!]!
+}
+
+# Mutation: add one menu item (the INSERT)
+type Mutation {
+  addMenuItem(
+    outletId: ID!
+    name: String!
+    description: String
+    price: Float!
+  ): MenuItem!
+}

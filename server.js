@@ -1,4 +1,6 @@
 // server.js -- the CampusEats Catalogue GraphQL API
+const fs = require('fs');
+const path = require('path');
 const { ApolloServer } = require('@apollo/server');
 const { startStandaloneServer } = require('@apollo/server/standalone');
 const { GraphQLError } = require('graphql');
@@ -10,36 +12,8 @@ const OUTLET_COLS = 'outlet_id AS id, name, address, phone, is_active AS isActiv
 const ITEM_COLS =
   'menu_item_id AS id, outlet_id AS outletId, name, description, price, is_available AS isAvailable';
 
-// 1. the schema: what the API offers
-const typeDefs = `#graphql
-  type Outlet {
-    id: ID!
-    name: String!
-    address: String!
-    phone: String
-    isActive: Boolean!
-    menuItems: [MenuItem!]!
-  }
-
-  type MenuItem {
-    id: ID!
-    name: String!
-    description: String
-    price: Float!
-    isAvailable: Boolean!
-    outlet: Outlet!
-  }
-
-  type Query {
-    outlets: [Outlet!]!
-    outlet(id: ID!): Outlet
-    menuItems: [MenuItem!]!
-  }
-
-  type Mutation {
-    addMenuItem(outletId: ID!, name: String!, description: String, price: Float!): MenuItem!
-  }
-`;
+// 1. the schema: what the API offers (kept in schema.graphql)
+const typeDefs = fs.readFileSync(path.join(__dirname, 'schema.graphql'), 'utf8');
 
 // 2. the resolvers: how each field gets its data from MySQL
 const resolvers = {
