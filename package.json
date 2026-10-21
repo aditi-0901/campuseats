@@ -1,0 +1,17 @@
+{
+  "name": "campuseats-catalogue-graphql",
+  "version": "1.0.0",
+  "description": "CampusEats catalogue: HTML/CSS -> GraphQL (Apollo, Node) -> MySQL",
+  "main": "db.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@apollo/server": "^5.5.1",
+    "graphql": "^16.14.2",
+    "mysql2": "^3.24.6"
+  }
+}

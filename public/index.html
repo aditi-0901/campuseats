@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CampusEats Catalogue</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<h1>CampusEats Catalogue</h1>
+<p class="sub">Outlets and their menu items &mdash; data served by GraphQL</p>
+
+<div id="list">Loading&hellip;</div>
+
+<form id="addForm">
+  <h3>Add a menu item</h3>
+  <select id="outletId" required></select>
+  <input id="name" placeholder="Item name" maxlength="100" required>
+  <input id="description" placeholder="Description (optional)" maxlength="255">
+  <input id="price" type="number" step="0.01" min="0.01" placeholder="Price (&#8377;)" style="width:120px" required>
+  <button type="submit">Add item</button>
+  <div id="msg"></div>
+</form>
+
+<script>
+const API = 'http://localhost:4000/';
+
+// helper: send a GraphQL query/mutation to the API (a normal HTTP POST)
+async function gql(query, variables) {
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, variables }),
+  });
+  const json = await res.json();
+  if (json.errors) throw new Error(json.errors[0].message);
+  return json.data;
+}
+
+// escape text before putting it into innerHTML
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+function setMsg(text, cls) {
+  const m = document.getElementById('msg');
+  m.textContent = text;
+  m.className = cls || '';
+}
+
+// 1. READ: load all outlets with their menu items (one request)
+async function load() {
+  try {
+    const data = await gql(`{ outlets { id name address menuItems { id name description price isAvailable } } }`);
+    document.getElementById('list').innerHTML = data.outlets.map(o => `
+      <div class="outlet-card">
+        <h2>${esc(o.name)}</h2>
+        <div class="address">${esc(o.address)}</div>
+        ${o.menuItems.map(i => `
+          <div class="item${i.isAvailable ? '' : ' soldout'}">
+            ${esc(i.name)} <span class="price">&#8377;${i.price.toFixed(2)}</span>
+            ${i.isAvailable ? '' : '<span class="badge">Sold out</span>'}
+            ${i.description ? `<div class="desc">${esc(i.description)}</div>` : ''}
+          </div>`).join('')}
+      </div>`).join('');
+
+    // fill the outlet dropdown from the same data (keep the current choice)
+    const sel = document.getElementById('outletId');
+    const current = sel.value;
+    sel.innerHTML = data.outlets.map(o => `<option value="${esc(o.id)}">${esc(o.name)}</option>`).join('');
+    if (current) sel.value = current;
+  } catch (err) {
+    document.getElementById('list').textContent =
+      'Could not load data. Is the API running on port 4000? (' + err.message + ')';
+  }
+}
+
+// 2. WRITE: add a menu item, then reload the list
+document.getElementById('addForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('name').value;
+  const description = document.getElementById('description').value;
+  const price = Number(document.getElementById('price').value);
+  const outletId = document.getElementById('outletId').value;
+  try {
+    await gql(
+      `mutation($o:ID!,$n:String!,$d:String,$p:Float!){ addMenuItem(outletId:$o, name:$n, description:$d, price:$p){ id } }`,
+      { o: outletId, n: name, d: description, p: price }
+    );
+    const keep = outletId;
+    e.target.reset();
+    await load();
+    document.getElementById('outletId').value = keep;
+    setMsg('Menu item added.', 'ok');
+  } catch (err) {
+    setMsg('Error: ' + err.message, 'error');
+  }
+});
+
+load();
+</script>
+</body>
+</html>
