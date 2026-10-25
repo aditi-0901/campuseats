@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Campus Library</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,700&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Campus Library</h1>
+    <p class="sub">Every author gets a shelf. Every book stands on it.</p>
+  </header>
+
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <div class="layout">
+    <main id="shelves" aria-label="Authors and their books">
+      <p class="note">Loading the shelves&hellip;</p>
+    </main>
+
+    <aside class="panel">
+      <form id="bookForm">
+        <h2>Add a book</h2>
+        <label for="title">Title</label>
+        <input id="title" maxlength="200" required>
+        <label for="year">Year <span class="opt">(optional)</span></label>
+        <input id="year" type="number" min="1000" max="2100" step="1">
+        <label for="authorId">Author</label>
+        <select id="authorId" required></select>
+        <button type="submit">Add book</button>
+      </form>
+
+      <form id="authorForm">
+        <h2>Add an author</h2>
+        <label for="name">Name</label>
+        <input id="name" maxlength="100" required>
+        <label for="country">Country <span class="opt">(optional)</span></label>
+        <input id="country" maxlength="50">
+        <button type="submit">Add author</button>
+      </form>
+    </aside>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

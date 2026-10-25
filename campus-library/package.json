@@ -1,0 +1,17 @@
+{
+  "name": "campus-library",
+  "version": "1.0.0",
+  "description": "Campus Library: HTML/CSS front-end, GraphQL API (Node + Apollo), MySQL",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "web": "python3 -m http.server 5500 --directory public"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@apollo/server": "^5.5.1",
+    "dataloader": "^2.2.3",
+    "graphql": "^16.14.2",
+    "mysql2": "^3.24.6"
+  }
+}
