@@ -1,0 +1,33 @@
+"""
+CampusEats Catalogue Service: one Menu Item, exposed as a Dish.
+Backed by the MySQL table `menu_items` (see schema.sql).
+"""
+type Dish {
+  "Primary key of the menu item (menu_items.menu_item_id)."
+  id: ID!
+  name: String!
+  "Price in rupees, e.g. 90 or 59.5."
+  price: Float!
+  "false means sold out: students cannot order it."
+  available: Boolean!
+}
+
+"What a client sends to create a dish."
+input AddDishInput {
+  name: String!
+  price: Float!
+  "Optional. If the client leaves it out, the dish is created as available."
+  available: Boolean = true
+}
+
+type Query {
+  "Every dish on the menu."
+  dishes: [Dish!]!
+  "One dish by id, or null if there is no such dish."
+  dish(id: ID!): Dish
+}
+
+type Mutation {
+  "Add a new dish and return it, including the id MySQL gave it."
+  addDish(input: AddDishInput!): Dish!
+}
