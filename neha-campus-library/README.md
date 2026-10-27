@@ -128,20 +128,3 @@ You can also inspect the database structure:
     SHOW TABLES;
     SELECT * FROM authors;
     SELECT * FROM books;
-
-## What differs from the basic tutorial
-
-- Premium editorial frontend with responsive navigation, hero section,
-  collection statistics, book cards, and contribution forms.
-- Search by book title or author name and a publication-year filter using the
-  data already loaded from GraphQL.
-- Extra operations: `addAuthor`, `deleteBook`, and a `books(year:)` filter.
-- DataLoader batching: all books of all authors load in one SQL query (no N+1).
-- Input validation and clear errors for empty text, invalid years, unknown
-  authors, and duplicate records.
-- Table constraints: unique author names, unique title per author, and a year
-  range check.
-- No password in source code; database settings are supplied through
-  environment variables.
-- Front-end builds the page with safe DOM APIs, fills the author dropdown from
-  the API, shows loading/error/success states, and refreshes after mutations.
