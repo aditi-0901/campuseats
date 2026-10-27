@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Campus Library — discover authors and the books that shape ideas.">
+  <title>Campus Library | Knowledge lives here</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#home" aria-label="Campus Library home">
+      <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span><strong>Campus Library</strong><small>Knowledge lives here</small></span>
+    </a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="siteNav">Menu</button>
+    <nav id="siteNav" class="site-nav" aria-label="Primary navigation">
+      <a href="#home">Home</a>
+      <a href="#collection">Collection</a>
+      <a href="#about">About</a>
+      <a class="nav-cta" href="#add-book"><span aria-hidden="true">+</span> Add a book</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="home" class="hero page-width">
+      <div class="hero-copy">
+        <p class="eyebrow">The campus collection <span></span></p>
+        <h1>Every great idea begins <em>with a book.</em></h1>
+        <p class="hero-text">A considered collection of authors and ideas for curious minds. Find your next read, follow a thread of thought, and add something meaningful to the shelves.</p>
+        <div class="hero-actions">
+          <a class="button button-dark" href="#collection">Explore collection <span>↘</span></a>
+          <a class="text-link" href="#add-book">Add a book <span>↗</span></a>
+        </div>
+        <div class="hero-stats" aria-label="Collection statistics">
+          <div><strong id="authorCount">—</strong><span>Authors</span></div>
+          <div><strong id="bookCount">—</strong><span>Titles</span></div>
+          <div><strong id="yearRange">—</strong><span>Years covered</span></div>
+        </div>
+      </div>
+      <div class="hero-art" aria-label="A composition of books" role="img">
+        <div class="art-label">Read · Discover · Grow</div>
+        <div class="quote-mark">“</div>
+        <div class="art-book art-book-back"><span>THE<br>IDEA<br>ARCHIVE</span></div>
+        <div class="art-book art-book-mid"><span>WAYS OF<br>SEEING</span><small>VOL. 01</small></div>
+        <div class="art-book art-book-front"><span>THE<br>OPEN<br>PAGE</span><small>CAMPUS EDITION</small></div>
+        <div class="art-orbit"></div>
+      </div>
+    </section>
+
+    <section id="collection" class="collection page-width">
+      <div class="section-intro">
+        <div><p class="eyebrow">01 / The shelves <span></span></p><h2>Explore the<br><em>collection.</em></h2></div>
+        <p>Discover the people and ideas behind every title. Search the shelves by author or book, then follow the path wherever it leads.</p>
+      </div>
+      <div class="collection-toolbar">
+        <label class="search-box" for="searchInput"><span aria-hidden="true">⌕</span><input id="searchInput" type="search" placeholder="Search titles or authors..." autocomplete="off"><button id="clearSearch" type="button" aria-label="Clear search">×</button></label>
+        <label class="year-filter" for="yearFilter"><span>Year</span><select id="yearFilter"><option value="">All years</option></select></label>
+        <span id="resultCount" class="result-count"></span>
+      </div>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+      <div id="shelves" class="shelves" aria-label="Authors and their books">
+        <div class="loading-state"><span class="loader"></span><span>Opening the shelves...</span></div>
+      </div>
+    </section>
+
+    <section id="add-book" class="add-section page-width">
+      <div class="add-intro"><p class="eyebrow">02 / Contribute <span></span></p><h2>Add to the<br><em>collection.</em></h2><p>Help the campus library grow, one title at a time. Your contribution becomes part of a shared record of ideas.</p></div>
+      <div class="forms">
+        <form id="bookForm" class="library-form">
+          <div class="form-heading"><span class="form-number">01</span><div><h3>Add a book</h3><p>Place a new title on the shelf.</p></div></div>
+          <label for="title">Book title</label><input id="title" maxlength="200" required placeholder="e.g. The Art of Thinking">
+          <div class="form-row"><div><label for="year">Publication year <span>(optional)</span></label><input id="year" type="number" min="1000" max="2100" step="1" placeholder="2024"></div><div><label for="authorId">Author</label><select id="authorId" required></select></div></div>
+          <button class="button button-green" type="submit">Add to shelves <span>↗</span></button>
+        </form>
+        <form id="authorForm" class="library-form secondary-form">
+          <div class="form-heading"><span class="form-number">02</span><div><h3>Introduce an author</h3><p>Make room for a new voice.</p></div></div>
+          <label for="name">Author name</label><input id="name" maxlength="100" required placeholder="e.g. Maya Angelou">
+          <label for="country">Country <span>(optional)</span></label><input id="country" maxlength="50" placeholder="e.g. India">
+          <button class="button button-outline" type="submit">Add author <span>↗</span></button>
+        </form>
+      </div>
+    </section>
+
+    <section id="about" class="about page-width"><p class="eyebrow">03 / Our approach <span></span></p><blockquote>“A library is not a luxury but one of the necessities of life.”<cite>— Henry Ward Beecher</cite></blockquote><p class="about-note">Built for a community that believes ideas are better when they are shared.</p></section>
+  </main>
+
+  <footer class="site-footer page-width"><a class="brand" href="#home"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span><span><strong>Campus Library</strong><small>Knowledge lives here</small></span></a><p>Read widely. Think deeply. Keep learning.</p><div><a href="#home">Home</a><a href="#collection">Collection</a><a href="#add-book">Contribute</a></div><small>© 2025 Campus Library · A shared shelf for curious minds.</small></footer>
+  <script src="app.js"></script>
+</body>
+</html>
