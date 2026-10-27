@@ -1,0 +1,17 @@
+{
+  "name": "neha-campus-library",
+  "version": "1.0.0",
+  "description": "Neha Nupur's CS543 Tutorial 7: GraphQL API with Node.js, Apollo Server and MySQL",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "web": "python -m http.server 5500 --directory public"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@apollo/server": "^5.5.1",
+    "dataloader": "^2.2.3",
+    "graphql": "^16.14.2",
+    "mysql2": "^3.24.6"
+  }
+}
