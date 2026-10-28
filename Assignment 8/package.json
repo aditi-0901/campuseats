@@ -1,0 +1,14 @@
+{
+  "name": "campuseats-menu-api",
+  "version": "1.0.0",
+  "description": "CampusEats Menu service as a REST API (Node + Express) - CS543 Assignment 8",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["rest", "express", "campuseats"],
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}

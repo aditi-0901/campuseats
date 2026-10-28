@@ -1,0 +1,36 @@
+$ curl -si localhost:3000/items
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+[{"id":1,"name":"Veg Thali","price":90,"available":true},{"id":2,"name":"Paneer Roll","price":70,"available":true},{"id":3,"name":"Masala Chai","price":15,"available":true},{"id":4,"name":"Chole Bhature","price":80,"available":false}]
+
+$ curl -si localhost:3000/items/2
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{"id":2,"name":"Paneer Roll","price":70,"available":true}
+
+$ curl -si localhost:3000/items/99
+HTTP/1.1 404 Not Found
+Content-Type: application/json; charset=utf-8
+
+{"error":"not found"}
+
+$ curl -si -X POST localhost:3000/items -H "Content-Type: application/json" -d '{"name":"Masala Dosa","price":60}'
+HTTP/1.1 201 Created
+Content-Type: application/json; charset=utf-8
+
+{"id":5,"name":"Masala Dosa","price":60,"available":true}
+
+$ curl -si -X POST localhost:3000/items -H "Content-Type: application/json" -d '{"price":50}'
+HTTP/1.1 422 Unprocessable Entity
+Content-Type: application/json; charset=utf-8
+
+{"error":"name required"}
+
+$ curl -si -X POST localhost:3000/items -H "Content-Type: application/json" -d '{"name":"Samosa"}'
+HTTP/1.1 422 Unprocessable Entity
+Content-Type: application/json; charset=utf-8
+
+{"error":"price required (a number, 0 or more)"}
+
