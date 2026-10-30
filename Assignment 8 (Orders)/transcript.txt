@@ -1,0 +1,61 @@
+CampusEats Orders Service — HTTP verification transcript
+Local server: http://localhost:4000
+
+The following requests were run against the running Express app.
+
+$ curl -i http://localhost:4000/orders
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 450
+ETag: W/"1c2-67wHi570N8ckZV3VbbUBQw7avcU"
+Date: Fri, 30 Oct 2026 17:03:25 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+[{"id":1,"studentId":"20251651064","itemId":2,"qty":1,"status":"placed","createdAt":"2026-10-28T09:15:00.000Z"},{"id":2,"studentId":"20251651008","itemId":5,"qty":2,"status":"preparing","createdAt":"2026-10-28T09:22:00.000Z"},{"id":3,"studentId":"20251651084","itemId":1,"qty":1,"status":"ready","createdAt":"2026-10-28T09:30:00.000Z"},{"id":4,"studentId":"20251651064","itemId":3,"qty":3,"status":"completed","createdAt":"2026-10-28T10:05:00.000Z"}]
+$ curl -i http://localhost:4000/orders/2
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 113
+ETag: W/"71-v1XGoidc3MfVYVXhUp1qCiFS4mY"
+Date: Fri, 30 Oct 2026 17:03:25 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":2,"studentId":"20251651008","itemId":5,"qty":2,"status":"preparing","createdAt":"2026-10-28T09:22:00.000Z"}
+$ curl -i -X POST http://localhost:4000/orders -H 'Content-Type: application/json' -d '{"studentId":"20251651064","itemId":7,"qty":2}'
+HTTP/1.1 201 Created
+X-Powered-By: Express
+Location: /orders/5
+Content-Type: application/json; charset=utf-8
+Content-Length: 110
+ETag: W/"6e-Fs24JJgTVF/0HJFZ3kb1Ke3IeHY"
+Date: Fri, 30 Oct 2026 17:03:25 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":5,"studentId":"20251651064","itemId":7,"qty":2,"status":"placed","createdAt":"2026-10-30T17:03:25.552Z"}
+$ curl -i http://localhost:4000/orders/999
+HTTP/1.1 404 Not Found
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 68
+ETag: W/"44-IQd34Y+ZnJVkA6fq3BL3GnXM9Qc"
+Date: Fri, 30 Oct 2026 17:03:25 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"error":"Order not found","message":"No order exists with id 999."}
+$ curl -i -X POST http://localhost:4000/orders -H 'Content-Type: application/json' -d '{"studentId":"","itemId":0,"qty":-1}'
+HTTP/1.1 422 Unprocessable Entity
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 287
+ETag: W/"11f-sKFYlZP8J6AWnFQgd9dZalXdvMs"
+Date: Fri, 30 Oct 2026 17:03:25 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"error":"Validation failed","details":[{"field":"studentId","message":"studentId is required and must be a non-empty string."},{"field":"itemId","message":"itemId is required and must be a positive integer."},{"field":"qty","message":"qty is required and must be a positive integer."}]}
