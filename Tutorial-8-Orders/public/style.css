@@ -1,0 +1,193 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: #f1f3f8;
+  color: #222;
+  min-height: 100vh;
+}
+
+/* Header */
+
+header {
+  text-align: center;
+  padding: 35px 20px;
+  background: #243b55;
+  color: white;
+}
+
+header h1 {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+header p {
+  color: #dce6f1;
+}
+
+/* Main Layout */
+
+main {
+  max-width: 850px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+
+.container {
+  background: white;
+  padding: 28px;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.07);
+}
+
+h2 {
+  margin-bottom: 22px;
+  color: #243b55;
+}
+
+/* Form */
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+input {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #ccd2dc;
+  border-radius: 7px;
+  font-size: 15px;
+  outline: none;
+}
+
+input:focus {
+  border-color: #3478db;
+}
+
+/* Buttons */
+
+button {
+  padding: 11px 17px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.add-btn {
+  background: #2864dc;
+  color: white;
+}
+
+.add-btn:hover {
+  background: #174bb3;
+}
+
+.refresh-btn {
+  background: #e7edf8;
+  color: #243b55;
+}
+
+/* Order List */
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-heading h2 {
+  margin-bottom: 15px;
+}
+
+.order-card {
+  background: #f5f7fb;
+  border-left: 5px solid #3478db;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 14px;
+}
+
+.order-info {
+  margin-bottom: 12px;
+}
+
+.order-info h3 {
+  margin-bottom: 10px;
+  color: #243b55;
+}
+
+.order-info p {
+  margin-bottom: 7px;
+  color: #555;
+}
+
+.order-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.edit-btn {
+  background: #f0a52b;
+  color: white;
+}
+
+.delete-btn {
+  background: #dc3545;
+  color: white;
+}
+
+.edit-btn:hover {
+  background: #d18b15;
+}
+
+.delete-btn:hover {
+  background: #b52332;
+}
+
+/* Messages */
+
+#message {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #218838;
+}
+
+.empty-message {
+  text-align: center;
+  color: #777;
+  padding: 25px;
+}
+
+/* Footer */
+
+footer {
+  text-align: center;
+  padding: 20px;
+  color: #777;
+}
+
+/* Responsive */
+
+@media (max-width: 600px) {
+  main {
+    margin: 20px auto;
+  }
+
+  .container {
+    padding: 20px;
+  }
+
+  .section-heading {
+    gap: 10px;
+  }
+}
