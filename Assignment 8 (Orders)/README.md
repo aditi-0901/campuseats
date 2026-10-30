@@ -2,10 +2,10 @@
 
 **CS543 · Web Services · Assignment 8 of 12 · Group 7**
 
-| Role | Name | Roll No. |
-|---|---|---|
-| Group Leader | Aditi Garg | 20251651008 |
-| Group Member | Neha Nupur | 20251651064 |
+| Role         | Name              | Roll No.    |
+| ------------ | ----------------- | ----------- |
+| Group Leader | Aditi Garg        | 20251651008 |
+| Group Member | Neha Nupur        | 20251651064 |
 | Group Member | Shivam Kumar Soni | 20251651084 |
 
 ## Run the project
@@ -25,11 +25,11 @@ This assignment implements the **Orders Service** of CampusEats as a small REST 
 
 ### REST routes
 
-| Method | Path | Purpose | Success / failure |
-|---|---|---|---|
-| `GET` | `/orders` | List all orders | `200 OK` with a JSON array |
-| `GET` | `/orders/:id` | Fetch one order by its ID | `200 OK`; `404 Not Found` if absent or invalid |
-| `POST` | `/orders` | Create an order | `201 Created` with the new order and a `Location: /orders/{id}` header; `422 Unprocessable Content` for invalid fields |
+| Method | Path          | Purpose                   | Success / failure                                                                                                      |
+| ------ | ------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/orders`     | List all orders           | `200 OK` with a JSON array                                                                                             |
+| `GET`  | `/orders/:id` | Fetch one order by its ID | `200 OK`; `404 Not Found` if absent or invalid                                                                         |
+| `POST` | `/orders`     | Create an order           | `201 Created` with the new order and a `Location: /orders/{id}` header; `422 Unprocessable Content` for invalid fields |
 
 ### Example requests
 
@@ -124,6 +124,4 @@ The tests cover listing the seeded orders, fetching an existing order, returning
 
 ## Demo video
 
-Google Drive demonstration video: **Add the team's uploaded video link here.**
-
-> The assignment asks the team to upload a demonstration video to Google Drive. A video link cannot be generated locally, so add the team's Drive link after recording the live demo.
+Google Drive demonstration video: **[https://drive.google.com/file/d/1WbYqdZWsX3LVTI3CDWy0mWqTCsOg0CHt/view?usp=drive_link]**
