@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <title>CampusEats · Orders</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/"><span class="brand-mark">C</span><span>Campus<span class="brand-light">Eats</span></span></a>
+      <div class="workspace-label">WORKSPACE</div>
+      <a class="nav-item active" href="/"><span class="nav-icon">▦</span> Orders <span class="nav-count" id="nav-count">4</span></a>
+      <div class="sidebar-note"><span class="live-dot"></span><span>Orders service<br><small>REST API · Online demo</small></span></div>
+      <div class="sidebar-bottom"><div class="avatar">G7</div><div><strong>Group 7</strong><small>CS543 · Web Services</small></div></div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar"><div class="breadcrumb">CampusEats <span>/</span> <strong>Orders</strong></div><div class="top-right"><span class="api-status"><i></i> API connected</span><span class="profile-avatar">N</span></div></header>
+      <section class="page-heading"><div><div class="eyebrow">ORDER MANAGEMENT</div><h1>Orders</h1><p>View campus food orders and create a new order in seconds.</p></div><button class="primary-button" id="focus-form"><span>＋</span> Create order</button></section>
+
+      <section class="stats-grid" aria-label="Order summary">
+        <article class="stat-card"><div class="stat-top"><span>Total orders</span><span class="stat-icon purple">▤</span></div><strong id="total-stat">4</strong><small>All orders in this demo</small></article>
+        <article class="stat-card"><div class="stat-top"><span>Placed</span><span class="stat-icon blue">◷</span></div><strong id="placed-stat">1</strong><small>Waiting to be prepared</small></article>
+        <article class="stat-card"><div class="stat-top"><span>In progress</span><span class="stat-icon orange">⌁</span></div><strong id="progress-stat">1</strong><small>Currently preparing</small></article>
+        <article class="stat-card"><div class="stat-top"><span>Completed</span><span class="stat-icon green">✓</span></div><strong id="completed-stat">2</strong><small>Ready or collected</small></article>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel orders-panel"><div class="panel-heading"><div><h2>Recent orders</h2><p>Your latest campus orders</p></div><button class="refresh-button" id="refresh">↻ <span>Refresh</span></button></div>
+          <div class="table-wrap"><table><thead><tr><th>ORDER</th><th>STUDENT ID</th><th>ITEM ID</th><th>QTY</th><th>STATUS</th><th>CREATED</th></tr></thead><tbody id="orders-body"><tr><td colspan="6" class="empty">Loading orders…</td></tr></tbody></table></div>
+          <div class="panel-footer"><span id="showing-count">Showing 4 orders</span><span>In-memory data · resets on restart</span></div>
+        </article>
+
+        <article class="panel form-panel" id="create-panel"><div class="panel-heading"><div><h2>Create an order</h2><p>Add a new campus food order</p></div><span class="form-icon">＋</span></div>
+          <form id="order-form" novalidate>
+            <label for="studentId">Student ID <span>*</span></label><input id="studentId" name="studentId" placeholder="e.g. 20251651064" autocomplete="off" required>
+            <div class="form-row"><div><label for="itemId">Menu item ID <span>*</span></label><input id="itemId" name="itemId" type="number" min="1" step="1" placeholder="e.g. 2" required></div><div><label for="qty">Quantity <span>*</span></label><input id="qty" name="qty" type="number" min="1" step="1" value="1" required></div></div>
+            <div class="hint">New orders are automatically assigned the <b>Placed</b> status.</div>
+            <button class="submit-button" type="submit" id="submit-button">Create order <span>→</span></button>
+            <div class="form-message" id="form-message" role="status" aria-live="polite"></div>
+          </form>
+        </article>
+      </section>
+      <footer class="page-footer">CampusEats Orders Service <span>•</span> CS543 Assignment 8 <span>•</span> Group 7</footer>
+    </main>
+  </div>
+</body>
+</html>

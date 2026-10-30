@@ -1,0 +1,10 @@
+{
+  "name": "campuseats-orders-rest",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CampusEats Orders Service REST API and HTML/CSS/JS demo for CS543 Assignment 8",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "test": "node --test" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "express": "^5.1.0" }
+}
