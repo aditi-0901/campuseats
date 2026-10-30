@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>CampusEats | Orders</title>
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <header>
+      <h1>CampusEats</h1>
+      <p>Manage your food orders easily</p>
+    </header>
+
+    <main>
+      <section class="container">
+        <h2>Create New Order</h2>
+
+        <form id="orderForm">
+          <input type="text" id="item" placeholder="Enter food item" required />
+
+          <input
+            type="number"
+            id="price"
+            placeholder="Enter price"
+            min="0"
+            step="0.01"
+            required
+          />
+
+          <button type="submit" class="add-btn">Add Order</button>
+        </form>
+
+        <p id="message"></p>
+      </section>
+
+      <!-- All Orders Section -->
+      <section class="container">
+        <div class="section-heading">
+          <h2>All Orders</h2>
+
+          <button onclick="loadOrders()" class="refresh-btn">Refresh</button>
+        </div>
+
+        <div id="orderList">
+          <p>Loading orders...</p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>CampusEats | Web Services Tutorial 8</p>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
