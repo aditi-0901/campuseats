@@ -1,8 +1,9 @@
-# CampusEats Menu — Securing the REST API (JWT Authentication & Authorization)
+# CampusEats Menu — Securing the REST API
 
-**CS543 Web Services · Assignment 9** · Dr. Pramit Mazumdar · IIIT Vadodara
+**CS543 Web Services · Assignment 9**  
+**Faculty:** Dr. Pramit Mazumdar · IIIT Vadodara
 
-**How to run:** `npm install && node server.js`, then open [http://localhost:3000](http://localhost:3000).
+A secured REST API for the CampusEats Menu service using Node.js, Express.js, JWT authentication and role-based authorization.
 
 ## Team
 
@@ -12,124 +13,101 @@
 | 20251651084 | Shivam Kumar Soni |
 | 20251651064 | Neha Nupur |
 
-## Demo
+## How to Run
 
-- Demonstration video: *Paste Google Drive link here*
-- Screenshots:
-  - [GET without token – 401 Unauthorized](screenshots/1-no-token.png)
-  - [Restaurant login – JWT received](screenshots/2-restaurant-login.png)
-  - [GET with token – 200 OK](screenshots/3-get-with-token.png)
-  - [Restaurant adds item – 201 Created](screenshots/4-restaurant-post.png)
-  - [Customer login](screenshots/5-customer-login.png)
-  - [Customer POST – 403 Forbidden](screenshots/6-customer-post.png)
-- Raw `curl` output: [screenshots/curl-output.txt](screenshots/curl-output.txt)
+**1. Clone the repository**
 
-## Files
+```bash
+git clone YOUR_GITHUB_REPOSITORY_URL
+```
+
+**2. Navigate to the project folder**
+
+```bash
+cd Assignment_9
+```
+
+**3. Install dependencies**
+
+```bash
+npm install
+```
+
+**4. Configure environment variables**
+
+Create a `SECRET` variable.
+
+```env
+SECRET='dev-secret-change-me'
+PORT=3000
+```
+
+**5. Start the server**
+
+```bash
+node server.js
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+## Demo Video and Screenshots
+
+**Google Drive Demonstration Video:**
+
+[Watch CampusEats API Demonstration](https://drive.google.com/file/d/1ot1YrTbY1rbPXAYgfCIw4TrQYrnIVe_m/view?usp=sharing)
+
+**Screenshots:** Available in the `Screenshoots/` folder.
+
+The demonstration covers all five required test cases:
+
+1. **401 Unauthorized** – Accessing the menu without a token.
+2. **Login** – Successful restaurant login and JWT generation.
+3. **200 OK** – Accessing menu items using a valid JWT.
+4. **201 Created** – Restaurant successfully adding a new menu item.
+5. **403 Forbidden** – Customer trying to add a menu item.
+
+## Project Structure
 
 ```text
-server.js          Express REST API (authentication, authorization,
-                   routes, validation and in-memory menu data)
-package.json       Project dependencies
-package-lock.json Dependency lock file
-public/            Static frontend files (if used)
-screenshots/       API testing screenshots and curl output
+Assignment_9/
+│
+├── node_modules/
+├── public/
+│
+├── Screenshoots/
+│   ├── Access without login.png
+│   ├── Adding Item.png
+│   ├── Adding Item.png
+│   └── restro Authorization.png
+│
+├── .gitignore
+├── package.json
+├── package-lock.json
+├── server.js
+├── .env.example
+└── README.md
 ```
 
 ## Features
 
 - REST API using Node.js and Express.js.
-- JWT-based user authentication.
-- Password hashing and verification using bcryptjs.
-- Role-based authorization.
-- Two user roles: Customer and Restaurant.
-- Protected GET and POST routes.
-- Input validation for new menu items.
-- Proper HTTP status code handling.
-- In-memory menu storage (no database required).
+- JWT-based authentication.
+- Password hashing using bcryptjs.
+- Authentication middleware (`auth`).
+- Role-based authorization (`requireRole`).
+- Customer and Restaurant roles.
+- Protected API routes.
+- Input validation and error handling.
+- In-memory menu data storage.
 
-## Answers
-
-### 1. How is user authentication implemented?
-
-Authentication is implemented using **JSON Web Tokens (JWT)** and `bcryptjs`.
-
-- Two demo users are created when the server starts.
-- User passwords are stored as bcrypt hashes instead of plain text.
-- The user sends their email and password to the `/login` endpoint.
-- The server checks the password using `bcrypt.compareSync()`.
-- If the credentials are correct, the server generates a JWT using `jwt.sign()`.
-- The token contains the user's ID (`sub`) and role.
-- The token expires after one hour.
-
-### 2. What is the purpose of the authentication middleware?
-
-The `auth` middleware verifies the JWT token before allowing access to protected routes.
-
-- It reads the token from the `Authorization` header.
-- It verifies the token using `jwt.verify()`.
-- If the token is valid, the decoded user information is stored in `req.user`.
-- If the token is missing, invalid or expired, it returns `401 Unauthorized`.
-
-Example header:
-
-```text
-Authorization: Bearer <token>
-```
-
-### 3. How is role-based authorization implemented?
-
-Role-based authorization is implemented using the `requireRole()` middleware.
-
-There are two roles:
-
-- **Customer:** Can view the menu items.
-- **Restaurant:** Can view and add menu items.
-
-The middleware checks the role stored inside the verified JWT.
-
-If the user's role is not allowed, the server returns `403 Forbidden`.
-
-For example:
-
-```javascript
-app.get('/items', auth, (req, res) => {
-    res.json(items);
-});
-
-app.post('/items', auth, requireRole('restaurant'), (req, res) => {
-    // Add new menu item
-});
-```
-
-### 4. What is the difference between 401 and 403?
-
-| Status Code | Meaning | Example |
-|---|---|---|
-| 401 Unauthorized | User is not authenticated | Accessing `/items` without a token |
-| 403 Forbidden | User is authenticated but does not have permission | Customer trying to add a dish |
-
-**401 means:** The server cannot identify the user.
-
-**403 means:** The server knows the user, but the user is not allowed to perform that operation.
-
-### 5. Which API routes are protected?
+## API Endpoints
 
 | Method | Endpoint | Description | Access |
 |---|---|---|---|
-| POST | `/login` | Verify credentials and generate JWT | Public |
+| POST | `/login` | Login and generate JWT | Public |
 | GET | `/items` | Get all menu items | Authenticated users |
-| GET | `/items/:id` | Get a particular menu item | Authenticated users |
+| GET | `/items/:id` | Get a specific menu item | Authenticated users |
 | POST | `/items` | Add a new menu item | Restaurant only |
-
-### 6. How are passwords secured?
-
-Passwords are hashed using the `bcryptjs` package.
-
-- `bcrypt.hashSync()` generates a password hash.
-- `bcrypt.compareSync()` checks the entered password against the stored hash.
-- Passwords are never stored as plain text in the user objects.
-
-The JWT secret is used to sign and verify tokens.
 
 ## Demo Login Credentials
 
@@ -138,153 +116,171 @@ The JWT secret is used to sign and verify tokens.
 | Customer | shivam@campus.edu | customer123 |
 | Restaurant | mealhub@campus.edu | resto123 |
 
-These are demo credentials created for practical testing.
+Passwords are hashed using bcryptjs.
 
-## Quick Test
+# Answers
 
-The following commands can be executed using Windows Command Prompt (CMD).
+### 1. Which routes require only authentication, and which also require a role?
 
-### 1. Start the server
+The API uses two middleware functions: `auth` and `requireRole()`.
 
-```bash
-node server.js
+| Method | Path | Middleware | Allowed User |
+|---|---|---|---|
+| POST | `/login` | No authentication | Public |
+| GET | `/items` | `auth` | Any authenticated user |
+| GET | `/items/:id` | `auth` | Any authenticated user |
+| POST | `/items` | `auth` + `requireRole('restaurant')` | Restaurant only |
+
+The `auth` middleware verifies the JWT token, while `requireRole()` checks whether the authenticated user has permission to perform the requested operation.
+
+### 2. Show one 401 and one 403 from your demo. Why did the server return that code?
+
+**Case 1: 401 Unauthorized**
+
+Request:
+
+```http
+GET /items
 ```
 
-Expected output:
+Response:
 
-```text
-Catalogue on http://localhost:3000
+```json
+{
+  "error": "invalid or missing token"
+}
 ```
 
-### 2. GET items without a token (401)
+**Reason:** The server returned 401 because the request did not contain a valid JWT token. The user was not authenticated.
+
+**Case 2: 403 Forbidden**
+
+Request:
+
+```http
+POST /items
+```
+
+Response:
+
+```json
+{
+  "error": "forbidden"
+}
+```
+
+**Reason:** The server returned 403 because the customer had a valid JWT and was authenticated, but did not have the restaurant role required to add menu items.
+
+**Difference:** 401 means the user is not authenticated, whereas 403 means the user is authenticated but does not have permission.
+
+### 3. What is inside your JWT payload? Why is it safe to trust the role claim on the server, and why must the secret stay out of your code?
+
+The JWT payload contains:
+
+```json
+{
+  "sub": 2,
+  "role": "restaurant",
+  "iat": 1793890000,
+  "exp": 1793893600
+}
+```
+
+- `sub` – User ID.
+- `role` – User role (customer or restaurant).
+- `iat` – Token issued-at timestamp.
+- `exp` – Token expiration timestamp.
+
+The role claim is safe to trust after successful JWT verification because the token is digitally signed using the server's secret key. If someone modifies the payload, the signature becomes invalid and `jwt.verify()` rejects the token.
+
+The secret must stay out of the source code because anyone who obtains it can generate valid tokens and potentially impersonate users with higher permissions. Therefore, the secret is stored in `.env` and excluded from GitHub using `.gitignore`.
+
+## API Testing
+
+The following commands were used to test the API through Windows Command Prompt.
+
+**1. GET without token (401)**
 
 ```cmd
 curl -i http://localhost:3000/items
 ```
 
-Expected response:
-
-```json
-{"error":"invalid or missing token"}
-```
-
-### 3. Login as Restaurant
+**2. Login as Restaurant**
 
 ```cmd
 curl -X POST http://localhost:3000/login -H "Content-Type: application/json" -d "{\"email\":\"mealhub@campus.edu\",\"password\":\"resto123\"}"
 ```
 
-Copy the JWT token returned by the server.
-
-### 4. Set the Restaurant Token
+**3. Set Restaurant JWT**
 
 ```cmd
-set "TOKEN=PASTE_YOUR_RESTAURANT_TOKEN_HERE"
+set "TOKEN=YOUR_RESTAURANT_TOKEN"
 ```
 
-### 5. GET items with a valid token (200)
+**4. GET items with token (200)**
 
 ```cmd
 curl -i http://localhost:3000/items -H "Authorization: Bearer %TOKEN%"
 ```
 
-The server returns the menu items after successful authentication.
-
-### 6. Add a new item as Restaurant (201)
+**5. Add item as Restaurant (201)**
 
 ```cmd
 curl -i -X POST http://localhost:3000/items -H "Authorization: Bearer %TOKEN%" -H "Content-Type: application/json" -d "{\"name\":\"Masala Dosa\",\"price\":60}"
 ```
 
-Expected response:
-
-```json
-{
-    "id": 5,
-    "name": "Masala Dosa",
-    "price": 60
-}
-```
-
-### 7. Login as Customer
+**6. Login as Customer**
 
 ```cmd
 curl -X POST http://localhost:3000/login -H "Content-Type: application/json" -d "{\"email\":\"shivam@campus.edu\",\"password\":\"customer123\"}"
 ```
 
-Copy the new customer token.
-
-### 8. Set the Customer Token
+**7. Set Customer JWT**
 
 ```cmd
-set "TOKEN=PASTE_YOUR_CUSTOMER_TOKEN_HERE"
+set "TOKEN=YOUR_CUSTOMER_TOKEN"
 ```
 
-### 9. Try adding an item as Customer (403)
+**8. Try adding an item as Customer (403)**
 
 ```cmd
 curl -i -X POST http://localhost:3000/items -H "Authorization: Bearer %TOKEN%" -H "Content-Type: application/json" -d "{\"name\":\"Hack Burger\",\"price\":99}"
 ```
 
-Expected response:
-
-```json
-{
-    "error": "forbidden"
-}
-```
-
-The request is rejected because customers are not allowed to add menu items.
-
 ## Testing Results
 
-| Test Case | Expected Result | Actual Result |
-|---|---|---|
-| GET without token | 401 Unauthorized | 401 Unauthorized |
-| Restaurant login | JWT token | Successful |
-| GET with restaurant token | 200 OK | 200 OK |
-| POST with restaurant token | 201 Created | 201 Created |
-| Customer login | JWT token | Successful |
-| POST with customer token | 403 Forbidden | 403 Forbidden |
+| Test Case | Expected Result |
+|---|---|
+| GET without token | 401 Unauthorized |
+| Restaurant login | 200 OK + JWT |
+| GET with valid token | 200 OK |
+| POST as Restaurant | 201 Created |
+| POST as Customer | 403 Forbidden |
 
-All the above authentication and authorization tests were performed successfully.
+All five required demonstration cases were tested successfully.
 
-## Technologies Used
+## Security Implementation
 
-- Node.js
-- Express.js
-- JavaScript
-- JSON Web Token (`jsonwebtoken`)
-- bcryptjs
-- HTML and CSS (if frontend is included)
-
-## Important Notes
-
-- This assignment uses in-memory data storage, so menu changes are lost when the server restarts.
-- No MySQL database is required.
-- The demo users are created directly in `server.js`.
+- Passwords are hashed using bcryptjs.
 - JWT tokens expire after one hour.
-- The restaurant role is required to add new menu items.
-- The secret key used in this assignment is for demonstration only. In a real application, it should be stored in an environment variable.
-- In production, API requests should be served over HTTPS.
+- Protected routes verify tokens before processing requests.
+- Only restaurant users can add menu items.
+- JWT secret is stored in environment variables.
+- `.env` is excluded from GitHub using `.gitignore`.
+- HTTPS should be used in production.
 
 ## Learning Outcomes
 
 Through this assignment, we learned:
 
-- How to implement JWT authentication in Express.js.
-- How to hash and verify passwords using bcryptjs.
-- How to create authentication middleware.
-- How to implement role-based authorization.
-- How to protect REST API endpoints.
-- How to differentiate between HTTP 401 and 403 responses.
-- How to test secured APIs using curl.
+- Implementing JWT authentication in Express.js.
+- Hashing and verifying passwords using bcryptjs.
+- Creating authentication middleware.
+- Implementing role-based authorization.
+- Securing REST API endpoints.
+- Understanding the difference between 401 and 403.
+- Using environment variables to protect sensitive information.
 
 ---
 
 **Course:** CS543 – Web Services  
-**Assignment:** 9 – API Authentication and Authorization  
-**Faculty:** Dr. Pramit Mazumdar  
-**Institute:** IIIT Vadodara
-
-*Developed as part of our Web Services coursework.*
