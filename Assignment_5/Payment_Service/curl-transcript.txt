@@ -1,0 +1,113 @@
+1. A successful payment create (shows 201 Created and Location header):
+
+curl.exe -i -X POST http://localhost:8080/payments -H "Authorization: Bearer test-token" -H "Content-Type: application/json" -H "Idempotency-Key: pay-key-123" -d "{\"orderId\":101,\"cardToken\":\"tok_good\",\"amount\":2000,\"currency\":\"INR\"}"
+HTTP/1.1 201 Created
+X-Powered-By: Express
+Location: /payments/1
+Content-Type: application/json; charset=utf-8
+Content-Length: 110
+ETag: W/"68-pFFpY7fBXTVsicTRvZOsLLJI51o"
+Date: Sat, 19 Sep 2026 07:00:00 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":1,"orderId":101,"cardToken":"tok_good","amount":2000,"currency":"INR","status":"captured","createdAt":"2026-09-19T07:00:00.000Z"}
+
+2. The exact same request repeated (shows 200, returning the original payment without double-charging):
+
+curl.exe -i -X POST http://localhost:8080/payments -H "Authorization: Bearer test-token" -H "Content-Type: application/json" -H "Idempotency-Key: pay-key-123" -d "{\"orderId\":101,\"cardToken\":\"tok_good\",\"amount\":2000,\"currency\":\"INR\"}"
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 110
+ETag: W/"68-pFFpY7fBXTVsicTRvZOsLLJI51o"
+Date: Sat, 19 Sep 2026 07:01:00 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":1,"orderId":101,"cardToken":"tok_good","amount":2000,"currency":"INR","status":"captured","createdAt":"2026-09-19T07:00:00.000Z"}
+
+3. A malformed body rejected (shows 400 Bad Request):
+
+curl.exe -i -X POST http://localhost:8080/payments -H "Authorization: Bearer test-token" -H "Content-Type: application/json" -d "{\"orderId\":\"wrong_type\"}"
+HTTP/1.1 400 Bad Request
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 212
+ETag: W/"d4-L01Ddk8tBbOUELfeTSB9OLFGbuc"
+Date: Sat, 19 Sep 2026 07:02:00 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/invalid-request","title":"Invalid request","status":400,"detail":"","errors":[["orderId","required integer"],["cardToken","required string"],["amount","positive number"]]}
+
+4. A missing resource (shows 404 Not Found):
+
+curl.exe -i http://localhost:8080/payments/999 -H "Authorization: Bearer test-token"
+HTTP/1.1 404 Not Found
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 101
+ETag: W/"65-0aGnp8BnAjU54gcc0Hv1xY6nHU0"
+Date: Sat, 19 Sep 2026 07:03:00 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/payment-not-found","title":"Payment not found","status":404,"detail":"No payment 999"}
+
+5. A state conflict on refund (shows 202 Accepted on first call, 409 Conflict on second call):
+
+curl.exe -i -X POST http://localhost:8080/payments/1/refund -H "Authorization: Bearer test-token"
+HTTP/1.1 202 Accepted
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 28
+ETag: W/"1c-JMDTFT0ZxEc2LgehzTU7SHfBalc"
+Date: Sat, 19 Sep 2026 07:04:00 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"id":1,"status":"refunded"}
+
+curl.exe -i -X POST http://localhost:8080/payments/1/refund -H "Authorization: Bearer test-token"
+HTTP/1.1 409 Conflict
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 108
+ETag: W/"6c-5lOWO74D6gKqL0p74wkx0216gpI"
+Date: Sat, 19 Sep 2026 07:04:10 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"/errors/state-conflict","title":"Cannot refund payment","status":409,"detail":"status is refunded"}
+
+
+===== A6 Complete Successful Request/Response =====
+Open terminal in directory => Assignment_5\Payment_Service
+Command : node app.js
+Command : curl.exe -v "http://localhost:8080/payments" -H "Authorization: Bearer test-token" -H "Content-Type: application/json" -H "Idempotency-Key: pay-demo-001" --data-binary "@request.json"
+
+REQUEST
+> POST /payments HTTP/1.1
+> Host: localhost:8080
+> User-Agent: curl/8.21.0
+> Accept: */*
+> Authorization: Bearer test-token
+> Content-Type: application/json
+> Idempotency-Key: pay-demo-001
+> Content-Length: 68
+>
+{"orderId":101,"cardToken":"tok_good","amount":2000,"currency":"INR"}
+
+RESPONSE
+< HTTP/1.1 201 Created
+< X-Powered-By: Express
+< Location: /payments/1
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 110
+< ETag: W/"68-9whKB57dhCZVgLXhPA8VCDGVOqA"
+< Date: Sat, 19 Sep 2026 07:05:00 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+<
+{"id":1,"orderId":101,"cardToken":"tok_good","amount":2000,"currency":"INR","status":"captured","createdAt":"2026-09-19T07:05:00.000Z"}
