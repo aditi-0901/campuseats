@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CampusEats Menu</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>CampusEats Menu</h1>
+  <p class="sub">Served by a REST API (Node + Express) &mdash; <code>GET /items</code> and <code>POST /items</code></p>
+
+  <form id="loginForm">
+    <h3>Sign in to view the catalogue</h3>
+    <input type="text" id="username" placeholder="Username" required>
+    <input type="password" id="password" placeholder="Password" required>
+    <button type="submit">Login</button>
+    <p id="loginMsg"></p>
+    <p>Demo accounts: customer / customer123 · restaurant / restaurant123</p>
+  </form>
+
+  <div id="session" hidden></div>
+  <div id="list" hidden></div>
+
+  <form id="addForm" hidden>
+    <h3>Add a dish</h3>
+    <input type="text" id="name" placeholder="Dish name" required>
+    <input type="number" id="price" placeholder="Price (rupees)" min="0" required>
+    <label><input type="checkbox" id="available" checked> Available</label>
+    <button type="submit">Add dish</button>
+    <p id="msg"></p>
+  </form>
+
+  <script>
+    const list = document.getElementById('list');
+    const msg = document.getElementById('msg');
+    const loginMsg = document.getElementById('loginMsg');
+    const addForm = document.getElementById('addForm');
+    const session = document.getElementById('session');
+    let token = sessionStorage.getItem('catalogueToken') || '';
+    let currentRole = sessionStorage.getItem('catalogueRole') || '';
+
+    async function apiFetch(url, options = {}) {
+      const headers = { ...(options.headers || {}), Authorization: `Bearer ${token}` };
+      return fetch(url, { ...options, headers });
+    }
+
+    async function load() {
+      const res = await apiFetch('/items');
+      if (res.status === 401) {
+        logout();
+        loginMsg.textContent = 'Your session expired. Please log in again.';
+        return;
+      }
+      const items = await res.json();
+      list.replaceChildren(...items.map(i => {
+        const row = document.createElement('div');
+        row.className = 'dish' + (i.available ? '' : ' unavailable');
+        const left = document.createElement('span');
+        const id = document.createElement('span');
+        id.className = 'id';
+        id.textContent = '#' + i.id;
+        const nm = document.createElement('span');
+        nm.className = 'name';
+        nm.textContent = i.name;
+        left.append(id, nm);
+        const right = document.createElement('span');
+        right.className = 'right';
+        const badge = document.createElement('span');
+        badge.className = 'badge ' + (i.available ? 'yes' : 'no');
+        badge.textContent = i.available ? 'Available' : 'Sold out';
+        const price = document.createElement('span');
+        price.className = 'price';
+        price.textContent = '₹' + i.price;
+        right.append(badge, price);
+        row.append(left, right);
+        return row;
+      }));
+    }
+
+    function showSession() {
+      document.getElementById('loginForm').hidden = true;
+      list.hidden = false;
+      session.hidden = false;
+      session.textContent = `Logged in as ${currentRole}. `;
+      const logoutButton = document.createElement('button');
+      logoutButton.textContent = 'Logout';
+      logoutButton.addEventListener('click', logout);
+      session.append(logoutButton);
+      addForm.hidden = currentRole !== 'restaurant' && currentRole !== 'admin';
+      load();
+    }
+
+    function logout() {
+      token = '';
+      currentRole = '';
+      sessionStorage.removeItem('catalogueToken');
+      sessionStorage.removeItem('catalogueRole');
+      document.getElementById('loginForm').hidden = false;
+      list.hidden = true;
+      session.hidden = true;
+      addForm.hidden = true;
+      list.replaceChildren();
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: document.getElementById('username').value,
+          password: document.getElementById('password').value
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        loginMsg.textContent = `${res.status}: ${data.error}`;
+        return;
+      }
+      token = data.token;
+      currentRole = data.user.role;
+      sessionStorage.setItem('catalogueToken', token);
+      sessionStorage.setItem('catalogueRole', currentRole);
+      loginMsg.textContent = '';
+      showSession();
+    });
+
+    addForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const body = {
+        name: document.getElementById('name').value,
+        price: document.getElementById('price').value,
+        available: document.getElementById('available').checked
+      };
+      const res = await apiFetch('/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.status === 201) {
+        msg.className = 'ok';
+        msg.textContent = `Added "${data.name}" (id ${data.id})`;
+        event.target.reset();
+        document.getElementById('available').checked = true;
+        load();
+      } else {
+        msg.className = 'err';
+        msg.textContent = `${res.status}: ${data.error}`;
+      }
+    });
+
+    if (token && currentRole) showSession();
+  </script>
+</body>
+</html>
