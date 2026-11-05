@@ -54,7 +54,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 **Google Drive Demonstration Video:**
 
-[Watch CampusEats API Demonstration](https://drive.google.com/file/d/1ot1YrTbY1rbPXAYgfCIw4TrQYrnIVe_m/view?usp=sharing)
+[Watch CampusEats API Demonstration](https://drive.google.com/file/d/1ot1YrTbYlrbPXAYgfCIw4TrQYrnIVe_m/view?usp=sharing)
 
 **Screenshots:** Available in the `Screenshoots/` folder.
 
