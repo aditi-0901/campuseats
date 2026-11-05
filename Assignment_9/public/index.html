@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CampusEats Menu</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>CampusEats Menu</h1>
+  <p class="sub">Served by a REST API (Node + Express) &mdash; <code>GET /items</code> and <code>POST /items</code></p>
+
+  <div id="list">Loading&hellip;</div>
+
+  <form id="addForm">
+    <h3>Add a dish</h3>
+    <input type="text" id="name" placeholder="Dish name" required>
+    <input type="number" id="price" placeholder="Price (rupees)" min="0" required>
+    <label><input type="checkbox" id="available" checked> Available</label>
+    <button type="submit">Add dish</button>
+    <p id="msg"></p>
+  </form>
+
+  <script>
+    const list = document.getElementById('list');
+    const msg  = document.getElementById('msg');
+
+    // 1. READ: GET /items, then draw the list (textContent, so names can't inject HTML)
+    async function load() {
+      try {
+        const res = await fetch('/items');
+        const items = await res.json();
+        list.replaceChildren(...items.map(i => {
+          const row = document.createElement('div');
+          row.className = 'dish' + (i.available ? '' : ' unavailable');
+
+          const left = document.createElement('span');
+          const id = document.createElement('span');   id.className = 'id';   id.textContent = '#' + i.id;
+          const nm = document.createElement('span');   nm.className = 'name'; nm.textContent = i.name;
+          left.append(id, nm);
+
+          const right = document.createElement('span'); right.className = 'right';
+          const badge = document.createElement('span');
+          badge.className = 'badge ' + (i.available ? 'yes' : 'no');
+          badge.textContent = i.available ? 'Available' : 'Sold out';
+          const price = document.createElement('span'); price.className = 'price';
+          price.textContent = '₹' + i.price;
+          right.append(badge, price);
+
+          row.append(left, right);
+          return row;
+        }));
+      } catch (e) {
+        list.textContent = 'Could not reach the API. Is the server running?';
+      }
+    }
+
+    // 2. WRITE: the form POSTs a new dish, then refreshes the list
+    document.getElementById('addForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const body = {
+        name: document.getElementById('name').value,
+        price: document.getElementById('price').value,
+        available: document.getElementById('available').checked,
+      };
+      const res = await fetch('/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.status === 201) {
+        msg.className = 'ok';  msg.textContent = 'Added "' + data.name + '" (id ' + data.id + ')';
+        e.target.reset();
+        document.getElementById('available').checked = true;
+        load();
+      } else {
+        msg.className = 'err'; msg.textContent = res.status + ': ' + data.error;
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>
