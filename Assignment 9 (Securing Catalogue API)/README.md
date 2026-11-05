@@ -145,20 +145,3 @@ The assignment requires a short demo video and screenshots for these five cases:
 3. `200` — protected `GET /items` request with a valid token.
 4. `201` — `POST /items` using the restaurant token.
 5. `403` — `POST /items` using the customer token.
-
-Follow the exact sequence in [`demo/DEMO-CAPTURE-GUIDE.md`](demo/DEMO-CAPTURE-GUIDE.md). Save the screenshots and short recording in your Google Drive, set access to **Anyone with the link — Viewer** if permitted by your course policy, and paste the share links below.
-
-- GitHub repository: _paste the team's repository URL here_
-- Google Drive demo video: _paste the video URL here_
-- Google Drive screenshots folder: _paste the folder URL here_
-
-## Submission checklist
-
-- [ ] Push the project to the team's GitHub repository.
-- [ ] Confirm `.env` and `node_modules/` are not committed.
-- [ ] Keep `.env.example` in the repository with a blank `JWT_SECRET`.
-- [ ] Capture all five required response cases.
-- [ ] Record a short demo showing login, read access, privileged write access, and denied customer write access.
-- [ ] Upload the video and screenshots to Google Drive.
-- [ ] Replace the GitHub and Google Drive placeholders above with working links.
-- [ ] Submit one team submission through Google Classroom.
