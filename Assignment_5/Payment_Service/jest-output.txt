@@ -1,0 +1,8 @@
+payments.test.js has been updated for Assignment 5 Payment Service Parts C/D:
+  - tests require Authorization: Bearer header (B3)
+  - added: 401 on a missing token
+  - added: 422 on a declined card
+  - added: 304 on a matching If-None-Match (C1)
+  - added: 412 on a stale If-Match when refunding (C2)
+  - added: 202 on refund with a valid/matching If-Match (C2)
+  - added: idempotency-key test asserting second POST returns original 200 (C3)

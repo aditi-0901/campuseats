@@ -1,0 +1,258 @@
+openapi: 3.0.3
+info:
+  title: CampusEats Payments
+  version: "5.0.0"
+  description: >
+    Payment Service for CampusEats. All endpoints require a Bearer token
+    (B3) and are subject to per-client rate limiting (B5, X-RateLimit-*
+    response headers on every response). CORS is enabled on every
+    endpoint (B6). Error responses use a problem+json-style body
+    (type/title/status/detail) and are always sent with
+    Cache-Control: no-store.
+servers:
+  - url: http://localhost:8080
+
+security:
+  - bearerAuth: []
+
+paths:
+  /payments:
+    post:
+      summary: Process a new payment charge
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentRequest"
+      responses:
+        "201":
+          description: Payment processed and charged
+          headers:
+            Location:
+              description: URL of the newly created payment resource
+              schema: { type: string }
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Payment" }
+        "200":
+          description: >
+            Idempotent replay (C3) — the same Idempotency-Key was seen
+            before, so the original payment is returned unchanged and no
+            second charge is attempted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Payment" }
+        "400":
+          description: Malformed request body
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401":
+          description: Missing or malformed Bearer token
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "406":
+          description: Client cannot accept application/json
+        "422":
+          description: Payment declined by the bank
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After: { schema: { type: integer } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+    get:
+      summary: List payments (filter by orderId, sort, paginate)
+      parameters:
+        - in: query
+          name: orderId
+          schema: { type: integer }
+          description: Filter payments by order ID
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 10 }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [createdAt, id], default: createdAt }
+        - in: query
+          name: order
+          schema: { type: string, enum: [asc, desc], default: asc }
+      responses:
+        "200":
+          description: List of payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Payment" }
+        "400":
+          description: Invalid query parameter combination
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401":
+          description: Missing or malformed Bearer token
+
+  /payments/{id}:
+    get:
+      summary: Read a single payment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - $ref: "#/components/parameters/IfNoneMatch"
+      responses:
+        "200":
+          description: Payment resource representation
+          headers:
+            ETag: { schema: { type: string } }
+            Cache-Control: { schema: { type: string, example: "private, max-age=60" } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Payment" }
+        "304":
+          description: Not Modified — If-None-Match header matched current ETag
+        "401":
+          description: Missing or malformed Bearer token
+        "404":
+          description: Payment not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+    delete:
+      summary: Delete a payment (stub — accepts verb, does not destroy financial record; see NOTES.md A2/A5)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Missing or malformed Bearer token
+        "404":
+          description: Payment not found
+
+  /payments/{id}/refund:
+    post:
+      summary: Refund a payment (non-CRUD action, A2)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "202":
+          description: Refund request accepted; payment status is now "refunded"
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: integer }
+                  status: { type: string }
+        "401":
+          description: Missing or malformed Bearer token
+        "404":
+          description: Payment not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "409":
+          description: Payment is not in a refundable state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412":
+          description: >
+            Precondition Failed (C2) — the supplied If-Match no longer
+            matches the payment's current ETag; the client read a stale
+            version and must GET again before retrying.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: false
+      schema: { type: string }
+      description: >
+        Client-generated key (C3). Replaying the same key returns the
+        original payment instead of creating a duplicate and re-charging.
+    IfNoneMatch:
+      in: header
+      name: If-None-Match
+      required: false
+      schema: { type: string }
+      description: Conditional GET (C1); matching value yields 304.
+    IfMatch:
+      in: header
+      name: If-Match
+      required: false
+      schema: { type: string }
+      description: Conditional write (C2); stale value yields 412.
+  schemas:
+    PaymentRequest:
+      type: object
+      required: [orderId, cardToken, amount]
+      properties:
+        orderId: { type: integer }
+        cardToken: { type: string }
+        amount: { type: number, minimum: 0.01 }
+        currency: { type: string, default: "INR" }
+    Payment:
+      type: object
+      properties:
+        id: { type: integer }
+        orderId: { type: integer }
+        cardToken: { type: string }
+        amount: { type: number }
+        currency: { type: string }
+        status: { type: string, enum: [captured, refunded, failed] }
+        createdAt: { type: string, format: date-time }
+    Problem:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        errors:
+          type: array
+          items:
+            type: array
+            items: { type: string }
+
+    options:
+      summary: Discover allowed methods on /payments (A5)
+      responses:
+        "204":
+          description: Allowed methods returned in Allow header
+          headers:
+            Allow:
+              schema: { type: string, example: "GET, POST, OPTIONS" }
