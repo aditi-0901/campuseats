@@ -5,11 +5,11 @@
 
 ## Team
 
-| Roll Number | Name |
-|---|---|
-| 20251651008 | Aditi Garg |
+| Roll Number | Name              |
+| ----------- | ----------------- |
+| 20251651008 | Aditi Garg        |
 | 20251651084 | Shivam Kumar Soni |
-| 20251651064 | Neha Nupur |
+| 20251651064 | Neha Nupur        |
 
 ## Assignment objective
 
@@ -28,10 +28,10 @@ This project extends the existing Assignment 8 **Catalogue / Menu service**. It 
 
 These are classroom demonstration accounts. Passwords are stored in the source as bcrypt hashes, not as plain-text values.
 
-| Username | Password to enter at login | Role | Permission |
-|---|---|---|---|
-| `customer` | `customer123` | `customer` | Read catalogue |
-| `restaurant` | `restaurant123` | `restaurant` | Read and create catalogue items |
+| Username     | Password to enter at login | Role         | Permission                      |
+| ------------ | -------------------------- | ------------ | ------------------------------- |
+| `customer`   | `customer123`              | `customer`   | Read catalogue                  |
+| `restaurant` | `restaurant123`            | `restaurant` | Read and create catalogue items |
 
 The password values above are supplied only so the evaluator can test the seeded demo accounts. Do not reuse them in a real deployment.
 
@@ -85,12 +85,12 @@ Do not commit `.env`. Commit `.env.example`, which intentionally has a blank sec
 
 ## API routes and access rules
 
-| Method | Path | Authentication | Role authorization | Success |
-|---|---|---|---|---|
-| POST | `/login` | Not required | Not required | `200` with JWT |
-| GET | `/items` | Required | Any authenticated role | `200` |
-| GET | `/items/:id` | Required | Any authenticated role | `200` |
-| POST | `/items` | Required | `restaurant` or `admin` | `201` |
+| Method | Path         | Authentication | Role authorization      | Success        |
+| ------ | ------------ | -------------- | ----------------------- | -------------- |
+| POST   | `/login`     | Not required   | Not required            | `200` with JWT |
+| GET    | `/items`     | Required       | Any authenticated role  | `200`          |
+| GET    | `/items/:id` | Required       | Any authenticated role  | `200`          |
+| POST   | `/items`     | Required       | `restaurant` or `admin` | `201`          |
 
 The service currently has no PUT or DELETE route in the Assignment 8 Catalogue starter. No new update/delete endpoint has been added.
 
@@ -116,15 +116,15 @@ The JWT payload contains the user's `id` and `role`; `jsonwebtoken` also adds th
 
 ## Status code summary
 
-| Status | Meaning in this service |
-|---|---|
-| `200` | Login succeeded, or an authenticated user read catalogue data |
-| `201` | An authenticated `restaurant` or `admin` created an item |
-| `400` | Malformed JSON body |
-| `401` | Login credentials are incorrect, or a protected request has a missing/invalid/expired token |
-| `403` | Authenticated user does not have an allowed role for the write route |
-| `404` | Requested item ID does not exist |
-| `422` | New item has a missing/invalid name or price |
+| Status | Meaning in this service                                                                     |
+| ------ | ------------------------------------------------------------------------------------------- |
+| `200`  | Login succeeded, or an authenticated user read catalogue data                               |
+| `201`  | An authenticated `restaurant` or `admin` created an item                                    |
+| `400`  | Malformed JSON body                                                                         |
+| `401`  | Login credentials are incorrect, or a protected request has a missing/invalid/expired token |
+| `403`  | Authenticated user does not have an allowed role for the write route                        |
+| `404`  | Requested item ID does not exist                                                            |
+| `422`  | New item has a missing/invalid name or price                                                |
 
 ## Automated tests
 
@@ -145,20 +145,3 @@ The assignment requires a short demo video and screenshots for these five cases:
 3. `200` — protected `GET /items` request with a valid token.
 4. `201` — `POST /items` using the restaurant token.
 5. `403` — `POST /items` using the customer token.
-
-Follow the exact sequence in [`demo/DEMO-CAPTURE-GUIDE.md`](demo/DEMO-CAPTURE-GUIDE.md). Save the screenshots and short recording in your Google Drive, set access to **Anyone with the link — Viewer** if permitted by your course policy, and paste the share links below.
-
-- GitHub repository: _paste the team's repository URL here_
-- Google Drive demo video: _paste the video URL here_
-- Google Drive screenshots folder: _paste the folder URL here_
-
-## Submission checklist
-
-- [ ] Push the project to the team's GitHub repository.
-- [ ] Confirm `.env` and `node_modules/` are not committed.
-- [ ] Keep `.env.example` in the repository with a blank `JWT_SECRET`.
-- [ ] Capture all five required response cases.
-- [ ] Record a short demo showing login, read access, privileged write access, and denied customer write access.
-- [ ] Upload the video and screenshots to Google Drive.
-- [ ] Replace the GitHub and Google Drive placeholders above with working links.
-- [ ] Submit one team submission through Google Classroom.

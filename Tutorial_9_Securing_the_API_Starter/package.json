@@ -1,0 +1,15 @@
+{
+  "name": "campuseats-secured-catalogue",
+  "version": "1.0.0",
+  "description": "CampusEats Catalogue secured with JWT authentication and role-based authorization (CS543 Lecture 11).",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^18.0.9",
+    "express": "^4.22.3",
+    "jsonwebtoken": "^9.0.3"
+  }
+}
